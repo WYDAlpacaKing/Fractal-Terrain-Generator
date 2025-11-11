@@ -25,7 +25,6 @@ public class KochSnowFlake : MonoBehaviour
 
     void Update()
     {
-        // �ȼ�����
         if (Input.GetKeyDown(KeyCode.UpArrow))
         {
             iterations = Mathf.Min(iterations + 1, 6);
@@ -46,9 +45,20 @@ public class KochSnowFlake : MonoBehaviour
 
     public void GenerateSnowflake()
     {
+        // 确保 lineRenderer 已初始化
+        if (lineRenderer == null)
+        {
+            lineRenderer = GetComponent<LineRenderer>();
+            if (lineRenderer == null)
+            {
+                Debug.LogError("KochSnowFlake: LineRenderer component not found!");
+                return;
+            }
+            lineRenderer.material = new Material(Shader.Find("Sprites/Default"));
+        }
+        
         points.Clear();
 
-        //����������Ϊ���
         Vector3 p1 = new Vector3(-size / 2, -size / (2 * Mathf.Sqrt(3)), 0);
         Vector3 p2 = new Vector3(0, size / Mathf.Sqrt(3), 0);
         Vector3 p3 = new Vector3(size / 2, -size / (2 * Mathf.Sqrt(3)), 0);
@@ -82,7 +92,6 @@ public class KochSnowFlake : MonoBehaviour
             Vector3 oneThird = Vector3.Lerp(start, end, 1f / 3f);
             Vector3 twoThird = Vector3.Lerp(start, end, 2f / 3f);
 
-            // ��ת60�㹹�조͹�𡱵Ķ���
             Vector3 dir = twoThird - oneThird;
             Vector3 peak = oneThird + Quaternion.Euler(0f, 0f, angle) * dir;
 

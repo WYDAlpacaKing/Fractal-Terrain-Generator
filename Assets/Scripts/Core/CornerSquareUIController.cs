@@ -1,49 +1,49 @@
 using UnityEngine;
 
 /// <summary>
-/// Koch雪花分形的UI控制器
+/// 角落正方形分形的UI控制器
 /// </summary>
-public class KochUIController : MonoBehaviour, IFractalUI
+public class CornerSquareUIController : MonoBehaviour, IFractalUI
 {
-    [Header("Koch Snowflake Reference")]
-    public KochSnowFlake koch;
+    [Header("Corner Square Fractal Reference")]
+    public CornerSquareFractal cornerSquare;
     
-    private int lastIterations;
-    private float lastAngle;
+    private int lastDepth;
     private float lastSize;
+    private float lastSpacing;
     private float lastLineWidth;
-    private Color lastLineColor;
+    private Color lastColor;
     private bool needsUpdate = false;
     
-    public string FractalName => "Koch 雪花";
+    public string FractalName => "角落正方形";
     
     public GameObject GetTargetGameObject()
     {
-        return koch != null ? koch.gameObject : null;
+        return cornerSquare != null ? cornerSquare.gameObject : null;
     }
     
     private void Start()
     {
-        if (koch != null)
+        if (cornerSquare != null)
         {
-            lastIterations = koch.iterations;
-            lastAngle = koch.angle;
-            lastSize = koch.size;
-            lastLineWidth = koch.lineWidth;
-            lastLineColor = koch.lineColor;
+            lastDepth = cornerSquare.depth;
+            lastSize = cornerSquare.size;
+            lastSpacing = cornerSquare.spacing;
+            lastLineWidth = cornerSquare.lineWidth;
+            lastColor = cornerSquare.color;
         }
     }
     
     public void DrawGUI()
     {
-        if (koch == null)
+        if (cornerSquare == null)
         {
-            GUILayout.Label("Koch Snowflake 未分配！", GUI.skin.box);
+            GUILayout.Label("Corner Square Fractal 未分配！", GUI.skin.box);
             return;
         }
         
         // 只有在GameObject激活时才允许修改参数
-        bool isActive = koch.gameObject.activeSelf;
+        bool isActive = cornerSquare.gameObject.activeSelf;
         if (!isActive)
         {
             GUILayout.Label("该算法当前未激活", GUI.skin.box);
@@ -51,50 +51,50 @@ public class KochUIController : MonoBehaviour, IFractalUI
         }
         
         GUILayout.Space(5);
-        GUILayout.Label("Koch 雪花参数", GUI.skin.box);
+        GUILayout.Label("角落正方形参数", GUI.skin.box);
         GUILayout.Space(10);
         
-        // 迭代次数
+        // 递归深度
         GUILayout.BeginHorizontal();
-        GUILayout.Label("迭代次数:", GUILayout.Width(100));
-        koch.iterations = (int)GUILayout.HorizontalSlider(koch.iterations, 0, 6, GUILayout.ExpandWidth(true));
-        GUILayout.Label(koch.iterations.ToString(), GUILayout.Width(30));
+        GUILayout.Label("递归深度:", GUILayout.Width(100));
+        cornerSquare.depth = (int)GUILayout.HorizontalSlider(cornerSquare.depth, 1, 8, GUILayout.ExpandWidth(true));
+        GUILayout.Label(cornerSquare.depth.ToString(), GUILayout.Width(30));
         GUILayout.EndHorizontal();
         
-        if (koch.iterations != lastIterations)
+        if (cornerSquare.depth != lastDepth)
         {
             needsUpdate = true;
-            lastIterations = koch.iterations;
+            lastDepth = cornerSquare.depth;
         }
         
         GUILayout.Space(8);
         
-        // 生成角度
+        // 初始正方形尺寸
         GUILayout.BeginHorizontal();
-        GUILayout.Label("生成角度:", GUILayout.Width(100));
-        koch.angle = GUILayout.HorizontalSlider(koch.angle, 45f, 75f, GUILayout.ExpandWidth(true));
-        GUILayout.Label(koch.angle.ToString("F1") + "°", GUILayout.Width(50));
+        GUILayout.Label("初始尺寸:", GUILayout.Width(100));
+        cornerSquare.size = GUILayout.HorizontalSlider(cornerSquare.size, 0.25f, 10f, GUILayout.ExpandWidth(true));
+        GUILayout.Label(cornerSquare.size.ToString("F2"), GUILayout.Width(50));
         GUILayout.EndHorizontal();
         
-        if (Mathf.Abs(koch.angle - lastAngle) > 0.1f)
+        if (Mathf.Abs(cornerSquare.size - lastSize) > 0.01f)
         {
             needsUpdate = true;
-            lastAngle = koch.angle;
+            lastSize = cornerSquare.size;
         }
         
         GUILayout.Space(8);
         
-        // 三角形边长
+        // 间距系数
         GUILayout.BeginHorizontal();
-        GUILayout.Label("三角形边长:", GUILayout.Width(100));
-        koch.size = GUILayout.HorizontalSlider(koch.size, 3f, 8f, GUILayout.ExpandWidth(true));
-        GUILayout.Label(koch.size.ToString("F2"), GUILayout.Width(50));
+        GUILayout.Label("间距系数:", GUILayout.Width(100));
+        cornerSquare.spacing = GUILayout.HorizontalSlider(cornerSquare.spacing, 0.5f, 2f, GUILayout.ExpandWidth(true));
+        GUILayout.Label(cornerSquare.spacing.ToString("F2"), GUILayout.Width(50));
         GUILayout.EndHorizontal();
         
-        if (Mathf.Abs(koch.size - lastSize) > 0.01f)
+        if (Mathf.Abs(cornerSquare.spacing - lastSpacing) > 0.01f)
         {
             needsUpdate = true;
-            lastSize = koch.size;
+            lastSpacing = cornerSquare.spacing;
         }
         
         GUILayout.Space(8);
@@ -102,14 +102,14 @@ public class KochUIController : MonoBehaviour, IFractalUI
         // 线宽
         GUILayout.BeginHorizontal();
         GUILayout.Label("线宽:", GUILayout.Width(100));
-        koch.lineWidth = GUILayout.HorizontalSlider(koch.lineWidth, 0.01f, 0.2f, GUILayout.ExpandWidth(true));
-        GUILayout.Label(koch.lineWidth.ToString("F3"), GUILayout.Width(50));
+        cornerSquare.lineWidth = GUILayout.HorizontalSlider(cornerSquare.lineWidth, 0.01f, 0.2f, GUILayout.ExpandWidth(true));
+        GUILayout.Label(cornerSquare.lineWidth.ToString("F3"), GUILayout.Width(50));
         GUILayout.EndHorizontal();
         
-        if (Mathf.Abs(koch.lineWidth - lastLineWidth) > 0.001f)
+        if (Mathf.Abs(cornerSquare.lineWidth - lastLineWidth) > 0.001f)
         {
             needsUpdate = true;
-            lastLineWidth = koch.lineWidth;
+            lastLineWidth = cornerSquare.lineWidth;
         }
         
         GUILayout.Space(8);
@@ -119,12 +119,12 @@ public class KochUIController : MonoBehaviour, IFractalUI
         GUILayout.Label("颜色:", GUILayout.Width(100));
         GUILayout.Box("", GUILayout.Width(50), GUILayout.Height(20));
         Rect colorRect = GUILayoutUtility.GetLastRect();
-        GUI.color = koch.lineColor;
+        GUI.color = cornerSquare.color;
         GUI.DrawTexture(colorRect, Texture2D.whiteTexture);
         GUI.color = Color.white;
         GUILayout.EndHorizontal();
         
-        Color currentColor = koch.lineColor;
+        Color currentColor = cornerSquare.color;
         
         GUILayout.BeginHorizontal();
         GUILayout.Label("R:", GUILayout.Width(20));
@@ -144,17 +144,17 @@ public class KochUIController : MonoBehaviour, IFractalUI
         GUILayout.Label(b.ToString("F2"), GUILayout.Width(40));
         GUILayout.EndHorizontal();
         
-        if (Mathf.Abs(r - lastLineColor.r) > 0.01f || Mathf.Abs(g - lastLineColor.g) > 0.01f || Mathf.Abs(b - lastLineColor.b) > 0.01f)
+        if (Mathf.Abs(r - lastColor.r) > 0.01f || Mathf.Abs(g - lastColor.g) > 0.01f || Mathf.Abs(b - lastColor.b) > 0.01f)
         {
-            koch.lineColor = new Color(r, g, b, 1f);
+            cornerSquare.color = new Color(r, g, b, 1f);
             needsUpdate = true;
-            lastLineColor = koch.lineColor;
+            lastColor = cornerSquare.color;
         }
         
         // 统一更新以提高性能（只有在激活时才更新）
         if (needsUpdate && isActive)
         {
-            koch.GenerateSnowflake();
+            cornerSquare.GenerateFractal();
             needsUpdate = false;
         }
         
@@ -166,15 +166,15 @@ public class KochUIController : MonoBehaviour, IFractalUI
         {
             if (isActive)
             {
-                koch.GenerateSnowflake();
+                cornerSquare.GenerateFractal();
             }
         }
         if (GUILayout.Button("随机化", GUILayout.Height(30)))
         {
             if (isActive)
             {
-                koch.RandomizeParams();
-                koch.GenerateSnowflake();
+                cornerSquare.RandomizeParams();
+                cornerSquare.GenerateFractal();
                 UpdateParams();
             }
         }
@@ -183,26 +183,27 @@ public class KochUIController : MonoBehaviour, IFractalUI
     
     public void UpdateParams()
     {
-        if (koch != null)
+        if (cornerSquare != null)
         {
-            lastIterations = koch.iterations;
-            lastAngle = koch.angle;
-            lastSize = koch.size;
-            lastLineWidth = koch.lineWidth;
-            lastLineColor = koch.lineColor;
+            lastDepth = cornerSquare.depth;
+            lastSize = cornerSquare.size;
+            lastSpacing = cornerSquare.spacing;
+            lastLineWidth = cornerSquare.lineWidth;
+            lastColor = cornerSquare.color;
         }
     }
     
     public void Regenerate()
     {
-        if (koch != null && koch.gameObject.activeSelf)
+        if (cornerSquare != null && cornerSquare.gameObject.activeSelf)
         {
-            koch.GenerateSnowflake();
+            cornerSquare.GenerateFractal();
         }
     }
     
     public bool IsValid()
     {
-        return koch != null;
+        return cornerSquare != null;
     }
 }
+
