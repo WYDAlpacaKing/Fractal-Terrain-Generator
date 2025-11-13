@@ -15,6 +15,8 @@ public class FractalUIController : MonoBehaviour
     [Header("Camera Settings")]
     public float minCameraZ = -100f;
     public float maxCameraZ = -10f;
+    [Tooltip("如果未指定，将自动查找主摄像机或场景中的第一个摄像机")]
+    public Camera targetCamera;
     
     private List<IFractalUI> fractalUIs = new List<IFractalUI>();
     private List<GameObject> fractalGameObjects = new List<GameObject>();
@@ -28,11 +30,23 @@ public class FractalUIController : MonoBehaviour
     
     private void Start()
     {
-        // 获取主摄像机
-        mainCamera = Camera.main;
-        if (mainCamera == null)
+        // 获取摄像机：优先使用手动分配的，然后尝试主摄像机，最后查找场景中的任意摄像机
+        if (targetCamera != null)
         {
-            mainCamera = FindObjectOfType<Camera>();
+            mainCamera = targetCamera;
+        }
+        else
+        {
+            mainCamera = Camera.main;
+            if (mainCamera == null)
+            {
+                // 使用 Unity 推荐的新 API（Unity 2023.1+）
+                // FindFirstObjectByType 返回第一个找到的对象（确定性顺序）
+                // 如果您的 Unity 版本不支持此 API，请：
+                // 1. 在 Inspector 中手动分配 targetCamera，或
+                // 2. 将下面的代码改为：mainCamera = FindObjectOfType<Camera>();
+                mainCamera = FindFirstObjectByType<Camera>();
+            }
         }
         
         // 初始化摄像机Z位置
