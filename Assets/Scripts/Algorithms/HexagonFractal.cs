@@ -157,7 +157,7 @@ public class HexagonFractal : MonoBehaviour
             float angle_deg = 60 * i;
             float angle_rad = Mathf.Deg2Rad * angle_deg;
             pts.Add(new Vector3(r * Mathf.Cos(angle_rad), r * Mathf.Sin(angle_rad), 0));
-        }
+        } 
         return pts;
     }
     // --------------------------------------------------------------------
