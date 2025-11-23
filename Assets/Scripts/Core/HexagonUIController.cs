@@ -1,21 +1,22 @@
 using UnityEngine;
 
 /// <summary>
-/// 六边形分形的UI控制器
+/// Gosper曲线（六边形分形）的UI控制器
 /// </summary>
 public class HexagonUIController : MonoBehaviour, IFractalUI
 {
     [Header("Hexagon Fractal Reference")]
     public HexagonFractal hexagonFractal;
     
-    private int lastDepth;
-    private float lastHexRadius;
-    private float lastSpacing;
+    private int lastIterations;
+    private float lastRadius;
     private float lastLineWidth;
-    private Color lastColor;
+    private Color lastLineColor;
+    private bool lastAnimateGrowth;
+    private float lastGrowthProgress;
     private bool needsUpdate = false;
     
-    public string FractalName => "六边形分形";
+    public string FractalName => "Gosper曲线";
     
     public GameObject GetTargetGameObject()
     {
@@ -26,11 +27,12 @@ public class HexagonUIController : MonoBehaviour, IFractalUI
     {
         if (hexagonFractal != null)
         {
-            lastDepth = hexagonFractal.depth;
-            lastHexRadius = hexagonFractal.hexRadius;
-            lastSpacing = hexagonFractal.spacing;
+            lastIterations = hexagonFractal.iterations;
+            lastRadius = hexagonFractal.radius;
             lastLineWidth = hexagonFractal.lineWidth;
-            lastColor = hexagonFractal.color;
+            lastLineColor = hexagonFractal.lineColor;
+            lastAnimateGrowth = hexagonFractal.animateGrowth;
+            lastGrowthProgress = hexagonFractal.growthProgress;
         }
     }
     
@@ -51,50 +53,35 @@ public class HexagonUIController : MonoBehaviour, IFractalUI
         }
         
         GUILayout.Space(5);
-        GUILayout.Label("六边形分形参数", GUI.skin.box);
+        GUILayout.Label("Gosper曲线参数", GUI.skin.box);
         GUILayout.Space(10);
         
-        // 递归深度
+        // 迭代次数
         GUILayout.BeginHorizontal();
-        GUILayout.Label("递归深度:", GUILayout.Width(100));
-        hexagonFractal.depth = (int)GUILayout.HorizontalSlider(hexagonFractal.depth, 1, 6, GUILayout.ExpandWidth(true));
-        GUILayout.Label(hexagonFractal.depth.ToString(), GUILayout.Width(30));
+        GUILayout.Label("迭代次数:", GUILayout.Width(100));
+        hexagonFractal.iterations = (int)GUILayout.HorizontalSlider(hexagonFractal.iterations, 0, 6, GUILayout.ExpandWidth(true));
+        GUILayout.Label(hexagonFractal.iterations.ToString(), GUILayout.Width(30));
         GUILayout.EndHorizontal();
         
-        if (hexagonFractal.depth != lastDepth)
+        if (hexagonFractal.iterations != lastIterations)
         {
             needsUpdate = true;
-            lastDepth = hexagonFractal.depth;
+            lastIterations = hexagonFractal.iterations;
         }
         
         GUILayout.Space(8);
         
-        // 六边形半径
+        // 半径
         GUILayout.BeginHorizontal();
-        GUILayout.Label("六边形半径:", GUILayout.Width(100));
-        hexagonFractal.hexRadius = GUILayout.HorizontalSlider(hexagonFractal.hexRadius, 0.2f, 5f, GUILayout.ExpandWidth(true));
-        GUILayout.Label(hexagonFractal.hexRadius.ToString("F2"), GUILayout.Width(50));
+        GUILayout.Label("半径:", GUILayout.Width(100));
+        hexagonFractal.radius = GUILayout.HorizontalSlider(hexagonFractal.radius, 2f, 10f, GUILayout.ExpandWidth(true));
+        GUILayout.Label(hexagonFractal.radius.ToString("F2"), GUILayout.Width(50));
         GUILayout.EndHorizontal();
         
-        if (Mathf.Abs(hexagonFractal.hexRadius - lastHexRadius) > 0.01f)
+        if (Mathf.Abs(hexagonFractal.radius - lastRadius) > 0.001f)
         {
             needsUpdate = true;
-            lastHexRadius = hexagonFractal.hexRadius;
-        }
-        
-        GUILayout.Space(8);
-        
-        // 间距系数
-        GUILayout.BeginHorizontal();
-        GUILayout.Label("间距系数:", GUILayout.Width(100));
-        hexagonFractal.spacing = GUILayout.HorizontalSlider(hexagonFractal.spacing, 0.8f, 1.2f, GUILayout.ExpandWidth(true));
-        GUILayout.Label(hexagonFractal.spacing.ToString("F2"), GUILayout.Width(50));
-        GUILayout.EndHorizontal();
-        
-        if (Mathf.Abs(hexagonFractal.spacing - lastSpacing) > 0.01f)
-        {
-            needsUpdate = true;
-            lastSpacing = hexagonFractal.spacing;
+            lastRadius = hexagonFractal.radius;
         }
         
         GUILayout.Space(8);
@@ -116,15 +103,15 @@ public class HexagonUIController : MonoBehaviour, IFractalUI
         
         // 颜色控制
         GUILayout.BeginHorizontal();
-        GUILayout.Label("颜色:", GUILayout.Width(100));
+        GUILayout.Label("线条颜色:", GUILayout.Width(100));
         GUILayout.Box("", GUILayout.Width(50), GUILayout.Height(20));
         Rect colorRect = GUILayoutUtility.GetLastRect();
-        GUI.color = hexagonFractal.color;
+        GUI.color = hexagonFractal.lineColor;
         GUI.DrawTexture(colorRect, Texture2D.whiteTexture);
         GUI.color = Color.white;
         GUILayout.EndHorizontal();
         
-        Color currentColor = hexagonFractal.color;
+        Color currentColor = hexagonFractal.lineColor;
         
         GUILayout.BeginHorizontal();
         GUILayout.Label("R:", GUILayout.Width(20));
@@ -144,17 +131,45 @@ public class HexagonUIController : MonoBehaviour, IFractalUI
         GUILayout.Label(b.ToString("F2"), GUILayout.Width(40));
         GUILayout.EndHorizontal();
         
-        if (Mathf.Abs(r - lastColor.r) > 0.01f || Mathf.Abs(g - lastColor.g) > 0.01f || Mathf.Abs(b - lastColor.b) > 0.01f)
+        if (Mathf.Abs(r - lastLineColor.r) > 0.01f || Mathf.Abs(g - lastLineColor.g) > 0.01f || Mathf.Abs(b - lastLineColor.b) > 0.01f)
         {
-            hexagonFractal.color = new Color(r, g, b, 1f);
+            hexagonFractal.lineColor = new Color(r, g, b, 1f);
             needsUpdate = true;
-            lastColor = hexagonFractal.color;
+            lastLineColor = hexagonFractal.lineColor;
+        }
+        
+        GUILayout.Space(8);
+        
+        // 动画控制
+        GUILayout.BeginHorizontal();
+        hexagonFractal.animateGrowth = GUILayout.Toggle(hexagonFractal.animateGrowth, "动画生长", GUILayout.Width(100));
+        GUILayout.EndHorizontal();
+        
+        if (hexagonFractal.animateGrowth != lastAnimateGrowth)
+        {
+            needsUpdate = true;
+            lastAnimateGrowth = hexagonFractal.animateGrowth;
+        }
+        
+        if (hexagonFractal.animateGrowth)
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("生长进度:", GUILayout.Width(100));
+            hexagonFractal.growthProgress = GUILayout.HorizontalSlider(hexagonFractal.growthProgress, 0f, 1f, GUILayout.ExpandWidth(true));
+            GUILayout.Label(hexagonFractal.growthProgress.ToString("F2"), GUILayout.Width(50));
+            GUILayout.EndHorizontal();
+            
+            if (Mathf.Abs(hexagonFractal.growthProgress - lastGrowthProgress) > 0.001f)
+            {
+                needsUpdate = true;
+                lastGrowthProgress = hexagonFractal.growthProgress;
+            }
         }
         
         // 统一更新以提高性能（只有在激活时才更新）
         if (needsUpdate && isActive)
         {
-            hexagonFractal.Generate();
+            hexagonFractal.GenerateBoundary();
             needsUpdate = false;
         }
         
@@ -166,19 +181,15 @@ public class HexagonUIController : MonoBehaviour, IFractalUI
         {
             if (isActive)
             {
-                hexagonFractal.Generate();
+                hexagonFractal.GenerateBoundary();
             }
         }
         if (GUILayout.Button("随机化", GUILayout.Height(30)))
         {
             if (isActive)
             {
-                hexagonFractal.depth = Random.Range(1, 7);
-                hexagonFractal.hexRadius = Random.Range(0.2f, 5f);
-                hexagonFractal.spacing = Random.Range(0.8f, 1.2f);
-                hexagonFractal.lineWidth = Random.Range(0.005f, 0.2f);
-                hexagonFractal.color = new Color(Random.value, Random.value, Random.value);
-                hexagonFractal.Generate();
+                hexagonFractal.RandomizeParams();
+                hexagonFractal.GenerateBoundary();
                 UpdateParams();
             }
         }
@@ -189,11 +200,12 @@ public class HexagonUIController : MonoBehaviour, IFractalUI
     {
         if (hexagonFractal != null)
         {
-            lastDepth = hexagonFractal.depth;
-            lastHexRadius = hexagonFractal.hexRadius;
-            lastSpacing = hexagonFractal.spacing;
+            lastIterations = hexagonFractal.iterations;
+            lastRadius = hexagonFractal.radius;
             lastLineWidth = hexagonFractal.lineWidth;
-            lastColor = hexagonFractal.color;
+            lastLineColor = hexagonFractal.lineColor;
+            lastAnimateGrowth = hexagonFractal.animateGrowth;
+            lastGrowthProgress = hexagonFractal.growthProgress;
         }
     }
     
@@ -201,7 +213,7 @@ public class HexagonUIController : MonoBehaviour, IFractalUI
     {
         if (hexagonFractal != null && hexagonFractal.gameObject.activeSelf)
         {
-            hexagonFractal.Generate();
+            hexagonFractal.GenerateBoundary();
         }
     }
     
