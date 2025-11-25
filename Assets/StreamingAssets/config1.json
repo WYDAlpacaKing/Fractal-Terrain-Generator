@@ -1,0 +1,12 @@
+{
+    "configName": "Plains",
+    "seed": 100,
+    "scale": 80.0,
+    "octaves": 3,
+    "persistence": 0.5,
+    "lacunarity": 2.0,
+    "thresholdCommon": 0.3,
+    "thresholdRare": 0.6,
+    "thresholdGem": 0.85,
+    "offset": {"x": 0.0, "y": 0.0}
+}
