@@ -1,125 +1,90 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class CornerSquareFractal : MonoBehaviour
+public class CornerSquareFractal : BaseFractal
 {
     [Header("Fractal Parameters")]
-    [Range(1, 8)] public int depth = 3;         // 递归层级
-    [Range(0.25f, 10f)] public float size = 2f; // 最小方块尺寸（F(1) 的边长）
-    [Tooltip("间距调整：1 = 紧贴, >1 = 留缝隙, <1 = 压紧")]
-    [Range(0.5f, 2f)] public float spacing = 1.0f;
-
-    [Header("Rendering")]
-    public Color color = Color.cyan;
-    [Range(0.01f, 0.2f)] public float lineWidth = 0.05f;
-
+    private float size;
+    private float spacing;
     private Transform container;
-    private Material sharedMat;
-    private readonly List<LineRenderer> lrs = new();
+    private float lineWidth;
 
-    void Awake()
+    public override string[] GetParamNames() => new string[] { "Size", "Spacing", "Unused" };
+
+    public override void InitFromConfig(FractalConfig cfg)
     {
-        sharedMat = new Material(Shader.Find("Sprites/Default"));
+        base.config = cfg;
+        this.size = cfg.floatParam1;
+        this.spacing = cfg.floatParam2;
+        Generate();
     }
 
-    void Start()
+    public override void OnUpdateIteration(int iter) { config.iterations = iter; Generate(); }
+    public override void OnUpdateParameter(int idx, float val)
     {
-        GenerateFractal();
+        if (idx == 0) size = val * 5f;
+        if (idx == 1) spacing = val * 2f;
+        Generate();
     }
 
-    void Update()
+    public override void OnUpdateColor(Color c)
     {
-        if (Input.GetKeyDown(KeyCode.UpArrow)) { depth = Mathf.Min(depth + 1, 8); GenerateFractal(); }
-        if (Input.GetKeyDown(KeyCode.DownArrow)) { depth = Mathf.Max(depth - 1, 1); GenerateFractal(); }
-        if (Input.GetKeyDown(KeyCode.R)) { RandomizeParams(); GenerateFractal(); }
+        config.color = c;
+        Generate(); // 需要重新生成或遍历修改颜色，重新生成最简单
     }
 
-    public void GenerateFractal()
+    public override void OnRandomize()
     {
-        if (container != null)
-            Destroy(container.gameObject);
+        config.iterations = Random.Range(1, 5);
+        config.floatParam1 = Random.Range(0.2f, 0.8f);
+        config.floatParam2 = Random.Range(0.4f, 1.2f);
+        config.floatParam3 = Random.Range(0.1f, 0.5f);
+        config.color = new Color(Random.value, Random.value, Random.value);
 
-        container = new GameObject("FractalContainer").transform;
+        size = config.floatParam1 * 5f;
+        spacing = config.floatParam2 * 2f;
+        lineWidth = config.floatParam3 * 0.2f;
+        Generate();
+    }
+
+    void Generate()
+    {
+        if (container) DestroyImmediate(container.gameObject);
+        container = new GameObject("Container").transform;
         container.SetParent(transform, false);
-        lrs.Clear();
 
-        float totalExtent = size * Mathf.Pow(3, depth - 1);
-        DrawPattern(Vector3.zero, totalExtent, depth);
+        float totalExtent = size * Mathf.Pow(3, config.iterations - 1);
+        DrawPattern(Vector3.zero, totalExtent, config.iterations);
     }
 
-    /// <summary>
-    /// 递归逻辑：
-    /// F(1): 单个方块
-    /// F(n): 中心 + 四角 各放一个 F(n-1)
-    /// 子图整体尺寸 = 当前整体 / 3
-    /// </summary>
-    private void DrawPattern(Vector3 center, float extent, int d)
+    void DrawPattern(Vector3 center, float extent, int d)
     {
         if (d <= 0) return;
+        if (d == 1) { DrawSquare(center, size); return; }
 
-        if (d == 1)
-        {
-            DrawSquare(center, size); // 基层用固定单方块尺寸
-            return;
-        }
-
-        float childExtent = extent / 3f;  // 子图整体宽度
-        float offset = childExtent * spacing; // 偏移距离（可调节）
-
-        // 五个位置：中心 + 四角
-        Vector3[] offsets =
-        {
-            Vector3.zero,
-            new Vector3(+offset, +offset, 0),
-            new Vector3(-offset, +offset, 0),
-            new Vector3(+offset, -offset, 0),
-            new Vector3(-offset, -offset, 0)
-        };
-
-        foreach (var off in offsets)
-        {
-            DrawPattern(center + off, childExtent, d - 1);
-        }
+        float child = extent / 3f;
+        float off = child * spacing;
+        DrawPattern(center, child, d - 1);
+        DrawPattern(center + new Vector3(off, off), child, d - 1);
+        DrawPattern(center + new Vector3(-off, off), child, d - 1);
+        DrawPattern(center + new Vector3(off, -off), child, d - 1);
+        DrawPattern(center + new Vector3(-off, -off), child, d - 1);
     }
 
-    /// <summary> 绘制一个方块 </summary>
-    private void DrawSquare(Vector3 center, float extent)
+    void DrawSquare(Vector3 c, float s)
     {
-        float h = extent * 0.5f;
-        Vector3[] corners =
-        {
-            center + new Vector3(-h, -h, 0),
-            center + new Vector3(-h,  h, 0),
-            center + new Vector3( h,  h, 0),
-            center + new Vector3( h, -h, 0)
-        };
-
-        var go = new GameObject($"Square_{extent:F3}");
+        GameObject go = new GameObject("sq");
         go.transform.SetParent(container, false);
-        var lr = go.AddComponent<LineRenderer>();
-
-        lr.sharedMaterial = sharedMat;
+        LineRenderer lr = go.AddComponent<LineRenderer>();
+        lr.useWorldSpace = false;
         lr.loop = true;
-        lr.positionCount = corners.Length;
-        lr.useWorldSpace = true;
-        lr.startWidth = lr.endWidth = lineWidth;
-        lr.startColor = lr.endColor = color;
-        lr.SetPositions(corners);
-
-        lrs.Add(lr);
-    }
-
-    public void RandomizeParams()
-    {
-        spacing = Random.Range(0.9f, 1.2f);
-        size = Random.Range(0.8f, 3.5f);
-        color = new Color(Random.value, Random.value, Random.value);
-
-        foreach (var lr in lrs)
-        {
-            if (!lr) continue;
-            lr.startColor = lr.endColor = color;
-            lr.startWidth = lr.endWidth = lineWidth;
-        }
+        lr.material = new Material(Shader.Find("Sprites/Default"));
+        lr.startColor = lr.endColor = config.color;
+        lr.startWidth = lr.endWidth = 0.05f;
+        float h = s * 0.5f;
+        lr.positionCount = 4;
+        lr.startColor = lr.endColor = config.color;
+        lr.startWidth = lr.endWidth = lineWidth; // 设置线宽
+        lr.SetPositions(new Vector3[] { c + new Vector3(-h, -h), c + new Vector3(-h, h), c + new Vector3(h, h), c + new Vector3(h, -h) });
     }
 }

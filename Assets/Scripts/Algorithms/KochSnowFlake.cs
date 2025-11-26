@@ -3,81 +3,77 @@ using UnityEngine;
 using static UnityEngine.Rendering.HableCurve;
 
 [RequireComponent(typeof(LineRenderer))]
-public class KochSnowFlake : MonoBehaviour
+public class KochSnowFlake : BaseFractal
 {
     [Header("Koch Snowflake Settings")]
-    [Range(0, 6)] public int iterations = 4; //��������
-    public float size = 5f; //��ʼ�߳�
-    public float angle = 60f;
-    public float lineWidth = 0.05f;
-    public Color lineColor = Color.white;
-    public bool autoUpdate = true;
+    private LineRenderer lr;
+    private float size;
+    private float angle;
+    private float lineWidth;
 
-    private LineRenderer lineRenderer;
-    private List<Vector3> points = new List<Vector3>();
+    public override string[] GetParamNames() => new string[] { "Size", "Angle", "Line Width" };
 
-    void Start()
+    public override void InitFromConfig(FractalConfig cfg)
     {
-        lineRenderer = GetComponent<LineRenderer>();
-        lineRenderer.material = new Material(Shader.Find("Sprites/Default"));
-        
+        base.config = cfg;
+        this.size = cfg.floatParam1;
+        this.angle = cfg.floatParam2;
+        if (!lr) SetupLR();
+        Generate();
     }
 
-    void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.UpArrow))
-        {
-            iterations = Mathf.Min(iterations + 1, 6);
-            GenerateSnowflake();
-        }
-        if (Input.GetKeyDown(KeyCode.DownArrow))
-        {
-            iterations = Mathf.Max(iterations - 1, 0);
-            GenerateSnowflake();
-        }
+    public override void OnUpdateIteration(int newIter) { config.iterations = newIter; Generate(); }
 
-        if (Input.GetKeyDown(KeyCode.R))
-        {
-            RandomizeParams();
-            GenerateSnowflake();
-        }
+    public override void OnUpdateParameter(int idx, float val)
+    {
+        if (idx == 0) size = val * 10f;
+        if (idx == 1) angle = val * 90f;
+        Generate();
     }
 
-    public void GenerateSnowflake()
+    public override void OnUpdateColor(Color c)
     {
-        // 确保 lineRenderer 已初始化
-        if (lineRenderer == null)
-        {
-            lineRenderer = GetComponent<LineRenderer>();
-            if (lineRenderer == null)
-            {
-                Debug.LogError("KochSnowFlake: LineRenderer component not found!");
-                return;
-            }
-            lineRenderer.material = new Material(Shader.Find("Sprites/Default"));
-        }
-        
-        points.Clear();
+        config.color = c;
+        if (lr) { lr.startColor = c; lr.endColor = c; }
+    }
 
+    public override void OnRandomize()
+    {
+        config.iterations = Random.Range(1, 5);
+        config.floatParam1 = Random.Range(0.3f, 0.8f); // Size
+        config.floatParam2 = Random.Range(0.3f, 0.9f); // Angle
+        config.floatParam3 = Random.Range(0.05f, 0.3f); // Width
+        config.color = new Color(Random.value, Random.value, Random.value);
+
+        // Apply
+        size = config.floatParam1 * 10f;
+        angle = config.floatParam2 * 90f;
+        lineWidth = config.floatParam3 * 0.5f;
+
+        Generate();
+    }
+
+    void SetupLR()
+    {
+        lr = GetComponent<LineRenderer>();
+        if (!lr) lr = gameObject.AddComponent<LineRenderer>();
+        lr.useWorldSpace = false;
+        lr.material = new Material(Shader.Find("Sprites/Default"));
+    }
+
+    void Generate()
+    {
         Vector3 p1 = new Vector3(-size / 2, -size / (2 * Mathf.Sqrt(3)), 0);
         Vector3 p2 = new Vector3(0, size / Mathf.Sqrt(3), 0);
         Vector3 p3 = new Vector3(size / 2, -size / (2 * Mathf.Sqrt(3)), 0);
-
-
         List<Vector3> segment = new List<Vector3> { p1, p2, p3, p1 };
-        for (int i = 0; i < iterations; i++)
-        {
-            segment = Iterate(segment);
-        }
 
-        points = segment;
-        lineRenderer.positionCount = points.Count;
-        lineRenderer.startWidth = lineWidth;
-        lineRenderer.endWidth = lineWidth;
-        lineRenderer.startColor = lineColor;
-        lineRenderer.endColor = lineColor;
-        lineRenderer.useWorldSpace = false;
-        lineRenderer.SetPositions(points.ToArray());
+        for (int i = 0; i < config.iterations; i++) segment = Iterate(segment);
+
+        lr.positionCount = segment.Count;
+        lr.SetPositions(segment.ToArray());
+        lr.startColor = lr.endColor = config.color;
+        lr.startWidth = lr.endWidth = lineWidth; 
     }
 
     private List<Vector3> Iterate(List<Vector3> oldPoints)
@@ -102,12 +98,5 @@ public class KochSnowFlake : MonoBehaviour
         }
         newPoints.Add(oldPoints[oldPoints.Count - 1]);
         return newPoints;
-    }
-
-    public void RandomizeParams()
-    {
-        size = Random.Range(3f, 8f);
-        angle = Random.Range(45f, 75f);
-        lineColor = new Color(Random.value, Random.value, Random.value);
     }
 }

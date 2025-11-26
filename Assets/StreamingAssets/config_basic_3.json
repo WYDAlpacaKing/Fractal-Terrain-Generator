@@ -1,0 +1,8 @@
+{
+    "fractalName": "Hilbert Curve",
+    "iterations": 5,
+    "floatParam1": 0.5,
+    "floatParam2": 0.5,
+    "floatParam3": 0.1,
+    "color": { "r": 1.0, "g": 0.9, "b": 0.0, "a": 1.0 }
+}

@@ -1,89 +1,94 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class HexagonFractal : MonoBehaviour
+public class HexagonFractal : BaseFractal
 {
-    [Header("Fractal Settings")]
-    [Range(0, 6)] public int iterations = 2; // 0=Hexagon(6), 1=18 edges, 2=54 edges...
-    public float radius = 5f;
-    public float lineWidth = 0.1f;
-    public Color lineColor = Color.cyan;
-
-    [Header("Animation")]
-    public bool animateGrowth = false;
-    [Range(0, 1)] public float growthProgress = 1f;
-
-    private LineRenderer lineRenderer;
-    
-    // 预计算关键常数
-    // 旋转角度 A = atan(sqrt(3) / 5) ≈ 19.1066 度
+    private LineRenderer lr;
+    private float radius;
+    private float lineWidth;
+    private const float MaxRadius = 1.0f;
+    // 常数
     private const float AngleA = 19.106605f;
-    // 缩放比例 = 1 / sqrt(7)
-    private const float ScaleFactor = 0.37796447f; 
+    private const float ScaleFactor = 0.37796447f;
 
-    void Start()
+    // --- 实现基类接口 ---
+    public override string[] GetParamNames() => new string[] { "Radius", "Line Width", "Unused" };
+
+    public override void OnUpdateColor(Color c)
     {
-        lineRenderer = GetComponent<LineRenderer>();
-        lineRenderer.useWorldSpace = false;
-        lineRenderer.material = new Material(Shader.Find("Sprites/Default"));
-        lineRenderer.loop = true; // 轮廓必须闭合
-
-        GenerateBoundary();
+        config.color = c;
+        if (lr) { lr.startColor = c; lr.endColor = c; }
     }
 
-    void Update()
+    public override void OnRandomize()
     {
-        // 简单的输入控制
-        if (Input.GetKeyDown(KeyCode.UpArrow)) { iterations = Mathf.Min(iterations + 1, 7); GenerateBoundary(); }
-        if (Input.GetKeyDown(KeyCode.DownArrow)) { iterations = Mathf.Max(iterations - 1, 0); GenerateBoundary(); }
-        
-        if (animateGrowth) GenerateBoundary(); // 如果需要动态效果
+        // 随机生成参数并更新 config
+        config.iterations = Random.Range(1, 5);
+        config.floatParam1 = Random.Range(0.2f, 0.8f); // Radius
+        config.floatParam2 = Random.Range(0.05f, 0.3f); // Width
+        config.color = new Color(Random.value, Random.value, Random.value);
+
+        // 应用参数
+        radius = config.floatParam1 * MaxRadius;
+        lineWidth = config.floatParam2 * 0.5f;
+
+        if (lr) { lr.startColor = config.color; lr.endColor = config.color; }
+        GenerateBoundary();
     }
 
     private void OnValidate()
     {
-        if(lineRenderer != null) GenerateBoundary();
+        if(lr != null) GenerateBoundary();
     }
 
-    public void GenerateBoundary()
+    public override void OnUpdateParameter(int paramIndex, float value)
     {
-        // 确保 lineRenderer 已初始化
-        if (lineRenderer == null)
-        {
-            lineRenderer = GetComponent<LineRenderer>();
-            if (lineRenderer == null)
-            {
-                lineRenderer = gameObject.AddComponent<LineRenderer>();
-            }
-            lineRenderer.useWorldSpace = false;
-            lineRenderer.material = new Material(Shader.Find("Sprites/Default"));
-            lineRenderer.loop = true;
-        }
-        
-        // 1. 生成初始六边形 (Iteration 0)
-        // 注意：Gosper Island 的初始六边形通常需要旋转一定角度以匹配网格，这里我们用标准朝向
-        List<Vector3> currentPoints = GetHexagonCorners(radius);
-
-        // 2. 迭代细分
-        for (int i = 0; i < iterations; i++)
-        {
-            currentPoints = Subdivide(currentPoints);
-        }
-
-        // 3. 渲染
-        lineRenderer.startWidth = lineWidth;
-        lineRenderer.endWidth = lineWidth;
-        lineRenderer.startColor = lineColor;
-        lineRenderer.endColor = lineColor;
-        lineRenderer.positionCount = currentPoints.Count;
-        lineRenderer.SetPositions(currentPoints.ToArray());
+        if (paramIndex == 0) radius = value * MaxRadius;
+        if (paramIndex == 1) lineWidth = value * 0.5f;
+        GenerateBoundary();
     }
 
-    // ----------------------------------------------------------------
-    // 核心算法：几何细分
-    // 将每一条边替换为三条折线段
-    // 规则符合维度 1.129 (3 segments, scale sqrt(7))
-    // ----------------------------------------------------------------
+    public override void OnUpdateIteration(int newIter)
+    {
+        config.iterations = Mathf.Clamp(newIter, 0, 6);
+        GenerateBoundary();
+    }
+
+    public override void InitFromConfig(FractalConfig cfg)
+    {
+        base.config = cfg;
+        // 映射参数：P1->Radius, P2->LineWidth
+        this.radius = cfg.floatParam1 * MaxRadius;
+        this.lineWidth = cfg.floatParam2;
+
+        if (!lr) SetupLineRenderer();
+        GenerateBoundary();
+    }
+
+    
+
+    void SetupLineRenderer()
+    {
+        lr = GetComponent<LineRenderer>();
+        if (!lr) lr = gameObject.AddComponent<LineRenderer>();
+        lr.useWorldSpace = false;
+        lr.loop = true;
+        lr.material = new Material(Shader.Find("Sprites/Default"));
+    }
+
+    void GenerateBoundary()
+    {
+        List<Vector3> points = GetHexagonCorners(radius);
+        for (int i = 0; i < config.iterations; i++) points = Subdivide(points);
+
+        lr.positionCount = points.Count;
+        lr.SetPositions(points.ToArray());
+        lr.startWidth = lineWidth;
+        lr.endWidth = lineWidth;
+        lr.startColor = config.color;
+        lr.endColor = config.color;
+    }
+
     private List<Vector3> Subdivide(List<Vector3> oldPoints)
     {
         List<Vector3> newPoints = new List<Vector3>();
@@ -98,31 +103,31 @@ public class HexagonFractal : MonoBehaviour
             Vector3 p2 = oldPoints[(i + 1) % count];
 
             Vector3 vector = p2 - p1;
-            
+
             // 如果正在动画插值，混合原始向量和分形向量（可选高级功能）
             // 这里直接执行标准的 Gosper 边缘替换
-            
+
             // 向量变换逻辑：
             // 我们需要将向量 V 替换为 v1, v2, v3
             // v1: 旋转 -AngleA, 长度 * 1/sqrt(7)
             // v2: 旋转 -AngleA + 60度, 长度 * 1/sqrt(7)
             // v3: 旋转 -AngleA, 长度 * 1/sqrt(7)
             // 这一组向量加起来正好等于 V，且构成了向内的“凹陷”
-            
+
             float length = vector.magnitude * ScaleFactor;
-            
+
             // 计算基准角度（当前线段的角度）
             float baseAngle = Mathf.Atan2(vector.y, vector.x) * Mathf.Rad2Deg;
 
             // 构建三段向量
             // Segment 1: 向右偏转 ~19.1 度 (顺时针/Inwards)
             Vector3 v1 = Quaternion.Euler(0, 0, baseAngle - AngleA) * Vector3.right * length;
-            
+
             // Segment 2: 这里的角度是关键。
             // 在 Gosper 网格中，第二段相对第一段左转 60 度。
             // 所以相对 baseAngle，它是 -19.1 + 60 = +40.9 度
             Vector3 v2 = Quaternion.Euler(0, 0, baseAngle - AngleA + 60f) * Vector3.right * length;
-            
+
             // Segment 3: 再次回到 -19.1 度方向? 
             // 让我们检查一下数学：
             // v1 + v2 + v3 必须等于 vector
@@ -135,7 +140,7 @@ public class HexagonFractal : MonoBehaviour
             // 计算新的顶点位置
             Vector3 mid1 = p1 + v1;
             Vector3 mid2 = mid1 + v2;
-            
+
             // 添加点：只添加 p1, mid1, mid2。p2 会在下一次循环作为起始点添加
             newPoints.Add(p1);
             newPoints.Add(mid1);
@@ -159,15 +164,5 @@ public class HexagonFractal : MonoBehaviour
             pts.Add(new Vector3(r * Mathf.Cos(angle_rad), r * Mathf.Sin(angle_rad), 0));
         } 
         return pts;
-    }
-    // --------------------------------------------------------------------
-    // 随机化部分参数
-    // --------------------------------------------------------------------
-    public void RandomizeParams()
-    {
-        iterations = Random.Range(0, 7);
-        radius = Random.Range(2f, 10f);
-        lineWidth = Random.Range(0.01f, 0.15f);
-        lineColor = new Color(Random.value, Random.value, Random.value);
     }
 }

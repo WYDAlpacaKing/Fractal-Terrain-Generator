@@ -1,0 +1,8 @@
+{
+   "fractalName": "Box Fractal",
+    "iterations": 4,
+    "floatParam1": 0.4,
+    "floatParam2": 0.5,
+    "floatParam3": 0.0,
+    "color": { "r": 1.0, "g": 0.0, "b": 0.5, "a": 1.0 }
+}

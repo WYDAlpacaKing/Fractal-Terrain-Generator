@@ -1,0 +1,8 @@
+{
+   "fractalName": "Gosper Island",
+    "iterations": 2,
+    "floatParam1": 0.5,
+    "floatParam2": 0.1,
+    "floatParam3": 0.0,
+    "color": { "r": 0.0, "g": 1.0, "b": 1.0, "a": 1.0 }
+}
