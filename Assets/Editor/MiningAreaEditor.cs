@@ -8,14 +8,14 @@ public class MiningAreaEditor : Editor
     {
         MiningAreaGenerator gen = (MiningAreaGenerator)target;
 
-        // 1. 绘制默认属性
+        // 1. 绘制默认属性 (现在包含了 EditorConfig)
         DrawDefaultInspector();
 
         GUILayout.Space(10);
         EditorGUILayout.LabelField("工具面板 (Tools)", EditorStyles.boldLabel);
 
-        // 2. 显示动态计算结果 (核心功能 2)
-        // 使用 HelpBox 显示，比较醒目
+        // 2. 显示动态计算结果
+        // 注意：现在 GridColumns 和 GridRows 已经在 Generator 中恢复了
         string info = $"当前配置将生成网格:\n" +
                       $"横向: {gen.GridColumns} 列\n" +
                       $"纵向: {gen.GridRows} 行\n" +
@@ -30,19 +30,13 @@ public class MiningAreaEditor : Editor
 
         GUILayout.Space(5);
 
-        // 3. 按钮：生成背景
-        if (GUILayout.Button("1. 生成地盘背景 (Generate Base)", GUILayout.Height(30)))
+        // 3. 按钮：一键生成 (包含背景和矿物)
+        if (GUILayout.Button("生成地盘与矿物 (Generate All)", GUILayout.Height(40)))
         {
-            gen.GenerateBackground();
+            gen.GenerateViaEditor();
         }
 
-        // 4. 按钮：生成矿物
-        if (GUILayout.Button("2. 分形生成矿物 (Spawn Minerals)", GUILayout.Height(40)))
-        {
-            gen.GenerateMinerals();
-        }
-
-        // 5. 按钮：一键清理
+        // 4. 按钮：一键清理
         if (GUILayout.Button("清理所有 (Clear All)"))
         {
             // 简单的清理逻辑，利用 Transform 查找子物体
