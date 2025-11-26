@@ -16,7 +16,7 @@ public class FractalMasterController : MonoBehaviour
     // GUI 缓存值
     private float guiParam1, guiParam2, guiParam3;
     private float guiIter;
-    private float guiR, guiG, guiB; // 颜色缓存
+    private float guiR, guiG, guiB;
 
     void Start()
     {
@@ -28,16 +28,91 @@ public class FractalMasterController : MonoBehaviour
         SwitchFractal(0);
     }
 
+    // --- 新增：键盘输入监听 (Hotkeys) ---
+    void Update()
+    {
+        if (currentFractal == null) return;
+
+        // 1. 迭代控制 (Up/Down Arrow) - 修复你的BUG
+        if (Input.GetKeyDown(KeyCode.UpArrow))
+        {
+            ModifyIteration(1);
+        }
+        if (Input.GetKeyDown(KeyCode.DownArrow))
+        {
+            ModifyIteration(-1);
+        }
+
+        // 2. 分形切换 (数字键 1-6) - 作业要求
+        if (Input.GetKeyDown(KeyCode.Alpha1)) SwitchFractal(0);
+        if (Input.GetKeyDown(KeyCode.Alpha2)) SwitchFractal(1);
+        if (Input.GetKeyDown(KeyCode.Alpha3)) SwitchFractal(2);
+        if (Input.GetKeyDown(KeyCode.Alpha4)) SwitchFractal(3);
+        if (Input.GetKeyDown(KeyCode.Alpha5)) SwitchFractal(4);
+        if (Input.GetKeyDown(KeyCode.Alpha6)) SwitchFractal(5);
+
+        // 3. 参数微调 (WASD + QE) - 作业要求
+        // 按住 Shift 可以加速调整
+        float speed = Input.GetKey(KeyCode.LeftShift) ? 0.5f : 0.1f;
+        float dt = Time.deltaTime * speed;
+
+        // Param 1: A/D
+        if (Input.GetKey(KeyCode.D)) ModifyParam(0, dt);
+        if (Input.GetKey(KeyCode.A)) ModifyParam(0, -dt);
+
+        // Param 2: W/S
+        if (Input.GetKey(KeyCode.W)) ModifyParam(1, dt);
+        if (Input.GetKey(KeyCode.S)) ModifyParam(1, -dt);
+
+        // Param 3: E/Q
+        if (Input.GetKey(KeyCode.E)) ModifyParam(2, dt);
+        if (Input.GetKey(KeyCode.Q)) ModifyParam(2, -dt);
+    }
+
+    // 辅助方法：修改迭代并同步UI
+    void ModifyIteration(int delta)
+    {
+        int newIter = Mathf.Clamp((int)guiIter + delta, 0, 8);
+        if (newIter != (int)guiIter)
+        {
+            guiIter = newIter;
+            currentFractal.OnUpdateIteration((int)guiIter);
+        }
+    }
+
+    // 辅助方法：修改参数并同步UI
+    void ModifyParam(int index, float delta)
+    {
+        if (index == 0)
+        {
+            guiParam1 = Mathf.Clamp01(guiParam1 + delta);
+            currentFractal.OnUpdateParameter(0, guiParam1);
+        }
+        if (index == 1)
+        {
+            guiParam2 = Mathf.Clamp01(guiParam2 + delta);
+            currentFractal.OnUpdateParameter(1, guiParam2);
+        }
+        if (index == 2)
+        {
+            guiParam3 = Mathf.Clamp01(guiParam3 + delta);
+            currentFractal.OnUpdateParameter(2, guiParam3);
+        }
+    }
+
+    // --- IMGUI 绘制代码 ---
     void OnGUI()
     {
-        float width = 280; // 稍微宽一点容纳颜色
-        float height = 550;
+        float width = 280;
+        float height = 580; // 稍微加高一点显示提示信息
         GUILayout.BeginArea(new Rect(20, 20, width, height), GUI.skin.box);
 
         GUILayout.Label("<b>Fractal Generator</b>", centeredStyle());
+        GUILayout.Space(5);
+        GUILayout.Label("<size=10>Hotkeys: Arrows(Iter), 1-6(Switch)\nA/D, W/S, Q/E (Params)</size>", centeredStyle());
         GUILayout.Space(10);
 
-        // 1. 切换分形
+        // 1. 分形选择器
         GUILayout.Label("Select Fractal:");
         int newIndex = GUILayout.SelectionGrid(currentIndex, fractalNames, 2);
         if (newIndex != currentIndex) SwitchFractal(newIndex);
@@ -60,7 +135,7 @@ public class FractalMasterController : MonoBehaviour
 
             GUILayout.Space(5);
 
-            // 3. 参数滑条 (P1, P2, P3)
+            // 3. 参数滑条
             DrawParamSlider(0, ref guiParam1, pNames);
             DrawParamSlider(1, ref guiParam2, pNames);
             DrawParamSlider(2, ref guiParam3, pNames);
@@ -68,7 +143,7 @@ public class FractalMasterController : MonoBehaviour
             GUILayout.Space(10);
             GUILayout.Label("Color Adjustment (RGB):");
 
-            // 4. 颜色滑条
+            // 4. 颜色
             GUI.color = Color.red;
             float newR = GUILayout.HorizontalSlider(guiR, 0f, 1f);
             GUI.color = Color.green;
@@ -77,7 +152,6 @@ public class FractalMasterController : MonoBehaviour
             float newB = GUILayout.HorizontalSlider(guiB, 0f, 1f);
             GUI.color = Color.white;
 
-            // 检测颜色变化
             if (Mathf.Abs(newR - guiR) > 0.01f || Mathf.Abs(newG - guiG) > 0.01f || Mathf.Abs(newB - guiB) > 0.01f)
             {
                 guiR = newR; guiG = newG; guiB = newB;
@@ -86,11 +160,11 @@ public class FractalMasterController : MonoBehaviour
 
             GUILayout.Space(15);
 
-            // 5. 随机化按钮
+            // 5. 随机化
             if (GUILayout.Button("Randomize Params"))
             {
                 currentFractal.OnRandomize();
-                SyncUIFromFractal(); // 关键：随机化后要把数值同步回 UI
+                SyncUIFromFractal();
             }
         }
 
@@ -114,6 +188,8 @@ public class FractalMasterController : MonoBehaviour
 
     public void SwitchFractal(int index)
     {
+        if (index < 0 || index >= fractals.Length) return;
+
         if (currentFractal != null) currentFractal.gameObject.SetActive(false);
         currentIndex = index;
         currentFractal = fractals[index];
@@ -133,12 +209,20 @@ public class FractalMasterController : MonoBehaviour
             currentFractal.InitFromConfig(cfg);
             SyncUIFromFractal();
         }
+        else
+        {
+            Debug.LogWarning($"Config missing: {path}. Using defaults.");
+            // 如果没有配置，至少同步一次 UI 避免数值错乱
+            SyncUIFromFractal();
+        }
     }
 
-    // 将分形当前的内部参数反向同步给 GUI 变量
     void SyncUIFromFractal()
     {
+        if (currentFractal == null) return;
         FractalConfig cfg = currentFractal.GetConfig();
+        if (cfg == null) return;
+
         guiIter = cfg.iterations;
         guiParam1 = cfg.floatParam1;
         guiParam2 = cfg.floatParam2;
@@ -153,6 +237,7 @@ public class FractalMasterController : MonoBehaviour
         GUIStyle s = new GUIStyle(GUI.skin.label);
         s.alignment = TextAnchor.MiddleCenter;
         s.fontStyle = FontStyle.Bold;
+        s.richText = true; // 允许使用 <size> 标签
         return s;
     }
 }
