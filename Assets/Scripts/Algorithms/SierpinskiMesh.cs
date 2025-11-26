@@ -4,10 +4,10 @@ using UnityEngine;
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
 public class SierpinskiMesh : BaseFractal
 {
-    // 原有参数保留，但去掉了 [Header] 等属性，因为现在由 Config 控制
     private int maxIterations = 6;
     private float sideLength = 10f;
     private Color triangleColor = new Color(1f, 0.5f, 0f);
+    public float maxSideLength = 1f; // 用于 GUI 显示比例参考
 
     private Mesh mesh;
     private List<Vector3> vertices;
@@ -21,40 +21,31 @@ public class SierpinskiMesh : BaseFractal
         public TriData(Vector3 t, Vector3 l, Vector3 r) { top = t; left = l; right = r; }
     }
 
-    // --- 1. 实现基类接口 ---
-
-    public override string[] GetParamNames()
-    {
-        return new string[] { "Side Length", "Unused", "Unused" };
-    }
+    public override string[] GetParamNames() => new string[] { "Side Length", "Unused", "Unused" };
 
     public override void InitFromConfig(FractalConfig cfg)
     {
         base.config = cfg;
-
-        // 映射参数
         this.maxIterations = cfg.iterations;
-        this.sideLength = cfg.floatParam1 * 20f; // 假设 JSON 里存的是 0-1，这里放大到 0-20
+        this.sideLength = Map(cfg.floatParam1, 0.01f, maxSideLength); // 需求: 最大 0.07
         this.triangleColor = cfg.color;
 
         InitializeMesh();
-        GenerateFractal(); // 立即生成
+        GenerateFractal();
     }
 
     public override void OnUpdateIteration(int newIter)
     {
-        // 限制最大迭代防止卡死
         maxIterations = Mathf.Clamp(newIter, 0, 8);
         GenerateFractal();
     }
 
     public override void OnUpdateParameter(int index, float value)
     {
-        if (index == 0) // Param 1: Side Length
+        if (index == 0)
         {
-            sideLength = value * 20f; // 滑条范围通常 0-1，映射到合适尺寸
+            sideLength = Map(value, 0.01f, maxSideLength); // 需求: 最大 0.07
         }
-
         GenerateFractal();
     }
 
@@ -62,7 +53,6 @@ public class SierpinskiMesh : BaseFractal
     {
         config.color = c;
         triangleColor = c;
-        // 实时更新材质颜色，无需重新生成 Mesh
         var r = GetComponent<MeshRenderer>();
         if (r && r.sharedMaterial) r.sharedMaterial.color = c;
     }
@@ -70,12 +60,11 @@ public class SierpinskiMesh : BaseFractal
     public override void OnRandomize()
     {
         config.iterations = Random.Range(1, 7);
-        config.floatParam1 = Random.Range(0.2f, 0.8f);
+        config.floatParam1 = Random.value;
         config.color = new Color(Random.value, Random.value, Random.value);
 
-        // Apply
         maxIterations = config.iterations;
-        sideLength = config.floatParam1 * 20f;
+        sideLength = Map(config.floatParam1, 0.01f, maxSideLength);
         triangleColor = config.color;
 
         GenerateFractal();
@@ -100,12 +89,9 @@ public class SierpinskiMesh : BaseFractal
         mat.color = triangleColor;
     }
 
-    // 核心生成逻辑 (移除了动画部分，专注于静态展示)
     public void GenerateFractal()
     {
         if (mesh == null) InitializeMesh();
-
-        // 更新颜色
         var renderer = GetComponent<MeshRenderer>();
         if (renderer.sharedMaterial != null) renderer.sharedMaterial.color = triangleColor;
 
@@ -117,13 +103,10 @@ public class SierpinskiMesh : BaseFractal
         List<TriData> currentLevelTris = new List<TriData>();
         currentLevelTris.Add(new TriData(top, left, right));
 
-        // 迭代计算
         for (int i = 0; i < maxIterations; i++)
         {
             currentLevelTris = GetNextLevel(currentLevelTris);
         }
-
-        // 最后一次性构建 Mesh
         BuildMesh(currentLevelTris);
     }
 
@@ -154,7 +137,6 @@ public class SierpinskiMesh : BaseFractal
             vertices.Add(tri.top);
             vertices.Add(tri.left);
             vertices.Add(tri.right);
-
             triangles.Add(indexCounter);
             triangles.Add(indexCounter + 1);
             triangles.Add(indexCounter + 2);

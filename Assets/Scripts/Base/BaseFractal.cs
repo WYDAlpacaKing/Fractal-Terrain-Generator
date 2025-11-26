@@ -23,4 +23,9 @@ public abstract class BaseFractal : MonoBehaviour
 
     // 2. 随机化参数 (子类实现具体的随机逻辑)
     public abstract void OnRandomize();
+
+    protected float Map(float t, float min, float max)
+    {
+        return Mathf.Lerp(min, max, t);
+    }
 }

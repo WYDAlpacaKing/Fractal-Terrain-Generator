@@ -3,47 +3,49 @@ using UnityEngine;
 
 public class CornerSquareFractal : BaseFractal
 {
-    [Header("Fractal Parameters")]
     private float size;
     private float spacing;
     private Transform container;
     private float lineWidth;
 
-    public override string[] GetParamNames() => new string[] { "Size", "Spacing", "Unused" };
+    public override string[] GetParamNames() => new string[] { "Size", "Spacing", "Line Width" };
 
     public override void InitFromConfig(FractalConfig cfg)
     {
         base.config = cfg;
-        this.size = cfg.floatParam1;
-        this.spacing = cfg.floatParam2;
+        this.size = Map(cfg.floatParam1, 0.01f, 0.15f); // 需求: 最大 0.15
+        this.spacing = Map(cfg.floatParam2, 0.5f, 2.0f);
+        this.lineWidth = Map(cfg.floatParam3, 0.01f, 0.1f);
+        Generate();
+    }
+
+    public override void OnUpdateParameter(int idx, float val)
+    {
+        if (idx == 0) size = Map(val, 0.01f, 0.15f); // 需求: 最大 0.15
+        if (idx == 1) spacing = Map(val, 0.5f, 2.0f);
+        if (idx == 2) lineWidth = Map(val, 0.01f, 0.1f); // 【修复】线宽控制
         Generate();
     }
 
     public override void OnUpdateIteration(int iter) { config.iterations = iter; Generate(); }
-    public override void OnUpdateParameter(int idx, float val)
-    {
-        if (idx == 0) size = val * 5f;
-        if (idx == 1) spacing = val * 2f;
-        Generate();
-    }
 
     public override void OnUpdateColor(Color c)
     {
         config.color = c;
-        Generate(); // 需要重新生成或遍历修改颜色，重新生成最简单
+        Generate();
     }
 
     public override void OnRandomize()
     {
         config.iterations = Random.Range(1, 5);
-        config.floatParam1 = Random.Range(0.2f, 0.8f);
-        config.floatParam2 = Random.Range(0.4f, 1.2f);
-        config.floatParam3 = Random.Range(0.1f, 0.5f);
+        config.floatParam1 = Random.value;
+        config.floatParam2 = Random.value;
+        config.floatParam3 = Random.value;
         config.color = new Color(Random.value, Random.value, Random.value);
 
-        size = config.floatParam1 * 5f;
-        spacing = config.floatParam2 * 2f;
-        lineWidth = config.floatParam3 * 0.2f;
+        size = Map(config.floatParam1, 0.01f, 0.15f);
+        spacing = Map(config.floatParam2, 0.5f, 2.0f);
+        lineWidth = Map(config.floatParam3, 0.01f, 0.1f);
         Generate();
     }
 
@@ -79,12 +81,12 @@ public class CornerSquareFractal : BaseFractal
         lr.useWorldSpace = false;
         lr.loop = true;
         lr.material = new Material(Shader.Find("Sprites/Default"));
+
         lr.startColor = lr.endColor = config.color;
-        lr.startWidth = lr.endWidth = 0.05f;
+        lr.startWidth = lr.endWidth = lineWidth; // 【修复】使用变量
+
         float h = s * 0.5f;
         lr.positionCount = 4;
-        lr.startColor = lr.endColor = config.color;
-        lr.startWidth = lr.endWidth = lineWidth; // 设置线宽
         lr.SetPositions(new Vector3[] { c + new Vector3(-h, -h), c + new Vector3(-h, h), c + new Vector3(h, h), c + new Vector3(h, -h) });
     }
 }

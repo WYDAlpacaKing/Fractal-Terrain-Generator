@@ -5,28 +5,37 @@ using UnityEngine;
 [RequireComponent(typeof(LineRenderer))]
 public class HilbertCurve : BaseFractal
 {
-    [Header("Fractal Settings")]
     private LineRenderer lr;
     private float size;
     private float startAngle;
     private float lineWidth;
+    public float maxSize = 1f; // 用于 GUI 显示比例参考
 
-    public override string[] GetParamNames() => new string[] { "Size", "Start Angle", "Unused" };
+    public override string[] GetParamNames() => new string[] { "Size", "Start Angle", "Line Width" };
 
     public override void InitFromConfig(FractalConfig cfg)
     {
         base.config = cfg;
-        this.size = cfg.floatParam1;
-        this.startAngle = cfg.floatParam2;
+        this.size = Map(cfg.floatParam1, 0.01f, maxSize); // 需求: 最大 0.08
+        this.startAngle = Map(cfg.floatParam2, 0f, 360f);
+        this.lineWidth = Map(cfg.floatParam3, 0.001f, 0.1f); // 默认线宽范围
+
         if (!lr) SetupLR();
         Generate();
     }
 
-    public override void OnUpdateIteration(int i) { config.iterations = i; Generate(); }
+    public override void OnUpdateIteration(int i)
+    {
+        // 【修复】Hilbert 迭代不能小于 1，否则无法生成 Axiom
+        config.iterations = Mathf.Max(1, i);
+        Generate();
+    }
+
     public override void OnUpdateParameter(int idx, float val)
     {
-        if (idx == 0) size = val * 20f;
-        if (idx == 1) startAngle = val * 360f;
+        if (idx == 0) size = Map(val, 0.01f, maxSize); // 需求: 最大 0.08
+        if (idx == 1) startAngle = Map(val, 0f, 360f);
+        if (idx == 2) lineWidth = Map(val, 0.001f, 0.1f);
         Generate();
     }
 
@@ -39,14 +48,14 @@ public class HilbertCurve : BaseFractal
     public override void OnRandomize()
     {
         config.iterations = Random.Range(1, 6);
-        config.floatParam1 = Random.Range(0.3f, 0.8f);
-        config.floatParam2 = Random.Range(0f, 1f);
-        config.floatParam3 = Random.Range(0.1f, 0.4f);
+        config.floatParam1 = Random.value;
+        config.floatParam2 = Random.value;
+        config.floatParam3 = Random.value;
         config.color = new Color(Random.value, Random.value, Random.value);
 
-        size = config.floatParam1 * 20f;
-        startAngle = config.floatParam2 * 360f;
-        lineWidth = config.floatParam3 * 0.5f;
+        size = Map(config.floatParam1, 0.01f, maxSize);
+        startAngle = Map(config.floatParam2, 0f, 360f);
+        lineWidth = Map(config.floatParam3, 0.001f, 0.1f);
         Generate();
     }
 
@@ -60,18 +69,21 @@ public class HilbertCurve : BaseFractal
 
     void Generate()
     {
-        string s = LSystem(config.iterations);
-        int N = 1 << config.iterations;
+        // 防止迭代过小
+        int safeIter = Mathf.Max(1, config.iterations);
+        string s = LSystem(safeIter);
+        int N = 1 << safeIter;
+
         float step = size / N;
         List<Vector3> pts = Turtle(s, step);
-        // Center logic
+
         Vector3 center = new Vector3(size / 2 - step / 2, size / 2 - step / 2, 0);
         for (int i = 0; i < pts.Count; i++) pts[i] -= center;
 
         lr.positionCount = pts.Count;
         lr.SetPositions(pts.ToArray());
         lr.startColor = lr.endColor = config.color;
-        lr.startWidth = lr.endWidth = lineWidth;
+        lr.startWidth = lr.endWidth = lineWidth; // 【修复】使用变量
     }
 
     string LSystem(int iter)
@@ -95,7 +107,7 @@ public class HilbertCurve : BaseFractal
     {
         List<Vector3> pts = new List<Vector3>();
         Vector3 pos = Vector3.zero;
-        Vector3 dir = Quaternion.Euler(0, 0, startAngle) * Vector3.right; // 180 for U-shape
+        Vector3 dir = Quaternion.Euler(0, 0, startAngle) * Vector3.right;
         pts.Add(pos);
         foreach (char c in s)
         {

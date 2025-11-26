@@ -11,28 +11,21 @@ public class DiamondCircleFractal : BaseFractal
 
     private Transform container;
     private Material sharedMat;
-    
 
-    // --- 1. 实现基类接口 ---
+    public float maxSize = 1f;// 用于 GUI 显示比例参考
 
-    public override string[] GetParamNames()
-    {
-        return new string[] { "Size", "Fill Ratio", "Line Width" };
-    }
+    public override string[] GetParamNames() => new string[] { "Size", "Fill Ratio", "Line Width" };
 
     public override void InitFromConfig(FractalConfig cfg)
     {
         base.config = cfg;
-
-        // 映射参数
         this.iterations = cfg.iterations;
-        this.size = cfg.floatParam1 * 10f;     // P1: Size
-        this.circleFillRatio = cfg.floatParam2; // P2: Fill Ratio (0-1)
-        this.lineWidth = cfg.floatParam3 > 0 ? cfg.floatParam3 : 0.05f; // P3: LineWidth
+        this.size = Map(cfg.floatParam1, 0.01f, maxSize); // 需求: 最小>0, 最大0.07
+        this.circleFillRatio = Map(cfg.floatParam2, 0.1f, 0.9f);
+        this.lineWidth = Map(cfg.floatParam3, 0.001f, 0.05f); // 需求: 最小>0
         this.color = cfg.color;
 
         if (sharedMat == null) sharedMat = new Material(Shader.Find("Sprites/Default"));
-
         GenerateFractal();
     }
 
@@ -47,13 +40,13 @@ public class DiamondCircleFractal : BaseFractal
         switch (index)
         {
             case 0: // Size
-                size = value * 10f;
+                size = Map(value, 0.01f, maxSize); // 需求范围
                 break;
             case 1: // Fill Ratio
-                circleFillRatio = Mathf.Clamp(value, 0.1f, 0.9f);
+                circleFillRatio = Map(value, 0.1f, 0.9f);
                 break;
             case 2: // Line Width
-                lineWidth = value * 0.2f;
+                lineWidth = Map(value, 0.001f, 0.05f); // 需求范围
                 break;
         }
         GenerateFractal();
@@ -63,27 +56,24 @@ public class DiamondCircleFractal : BaseFractal
     {
         config.color = c;
         this.color = c;
-        GenerateFractal(); // 重新生成以应用颜色到 LineRenderers
+        GenerateFractal();
     }
 
     public override void OnRandomize()
     {
         config.iterations = Random.Range(1, 5);
-        config.floatParam1 = Random.Range(0.3f, 0.9f); // Size
-        config.floatParam2 = Random.Range(0.2f, 0.7f); // Fill Ratio
-        config.floatParam3 = Random.Range(0.1f, 0.5f); // Width
+        config.floatParam1 = Random.value;
+        config.floatParam2 = Random.value;
+        config.floatParam3 = Random.value;
         config.color = new Color(Random.value, Random.value, Random.value);
 
-        // Apply
-        size = config.floatParam1 * 10f;
-        circleFillRatio = config.floatParam2;
-        lineWidth = config.floatParam3 * 0.2f;
+        size = Map(config.floatParam1, 0.01f, maxSize);
+        circleFillRatio = Map(config.floatParam2, 0.1f, 0.9f);
+        lineWidth = Map(config.floatParam3, 0.001f, 0.05f);
         color = config.color;
 
         GenerateFractal();
     }
-
-    // --- 2. 核心逻辑 (保留原有的递归绘制) ---
 
     public void GenerateFractal()
     {
@@ -94,6 +84,7 @@ public class DiamondCircleFractal : BaseFractal
         DrawRecursive(Vector3.zero, size, iterations);
     }
 
+    // ... DrawRecursive, DrawCircle, DrawLine, InitLineRenderer 保持原样 (它们已经使用了上面的变量) ...
     private void DrawRecursive(Vector3 center, float extent, int depth)
     {
         if (depth == 0)
@@ -128,11 +119,9 @@ public class DiamondCircleFractal : BaseFractal
     {
         GameObject go = new GameObject("Circle");
         go.transform.SetParent(container, false);
-
         LineRenderer lr = go.AddComponent<LineRenderer>();
         InitLineRenderer(lr);
         lr.loop = true;
-
         int segments = 24;
         lr.positionCount = segments;
         Vector3[] pts = new Vector3[segments];
@@ -148,10 +137,8 @@ public class DiamondCircleFractal : BaseFractal
     {
         GameObject go = new GameObject("Bridge");
         go.transform.SetParent(container, false);
-
         LineRenderer lr = go.AddComponent<LineRenderer>();
         InitLineRenderer(lr);
-
         lr.positionCount = 2;
         lr.SetPosition(0, start);
         lr.SetPosition(1, end);
