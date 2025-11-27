@@ -33,6 +33,19 @@ public class TerrainFace
         int[] triangles = new int[(resolution - 1) * (resolution - 1) * 6];
         int triIndex = 0;
 
+        // 缓存变量以减少循环内的访问开销，同时进行空值检查
+        bool hasFilter = noiseFilter != null;
+        bool hasSettings = noiseSettings != null;
+        // 【修复】必须检查 biomeGradient 是否为空
+        bool hasColor = colorSettings != null && colorSettings.biomeGradient != null;
+
+        // 预计算分母，防止除以0
+        float heightDivider = 1f;
+        if (hasSettings && noiseSettings.strength > 0 && hasColor && colorSettings.colorSpread > 0)
+        {
+            heightDivider = noiseSettings.strength * colorSettings.colorSpread;
+        }
+
         for (int y = 0; y < resolution; y++)
         {
             for (int x = 0; x < resolution; x++)
@@ -42,51 +55,47 @@ public class TerrainFace
                 Vector3 pointOnUnitCube = localUp + (percent.x - 0.5f) * 2 * axisA + (percent.y - 0.5f) * 2 * axisB;
                 Vector3 pointOnUnitSphere = pointOnUnitCube.normalized;
 
-                // 计算海拔
-                float elevation = noiseFilter.Evaluate(pointOnUnitSphere);
+                // 1. 计算高度 (带空值检查)
+                float elevation = hasFilter ? noiseFilter.Evaluate(pointOnUnitSphere) : 0f;
+
+                // 2. 应用顶点
                 vertices[i] = pointOnUnitSphere * (1 + elevation);
 
-                // --- 颜色计算修正 ---
-
-                if (colorSettings != null && colorSettings.biomeGradient != null)
+                // 3. 计算颜色 (带空值检查)
+                if (hasColor)
                 {
-                    // 【关键修改】
-                    // 不再依赖 noiseSettings.strength 来归一化。
-                    // 而是用独立的 colorSpread 来控制。
-
-                    // 逻辑：
-                    // 如果 elevation = 0.5 (半山腰), colorSpread = 1.0 --> 采样 0.5 (绿色)
-                    // 如果 elevation = 2.0 (极高),   colorSpread = 1.0 --> 采样 2.0 (被Clamp到1.0, 白色)
-                    // 如果 elevation = 0.5,         colorSpread = 0.5 --> 采样 1.0 (白色! 低矮的雪山)
-
-                    float heightPercent = elevation / colorSettings.colorSpread;
-
+                    // 安全的归一化计算
+                    float heightPercent = elevation / heightDivider;
                     colors[i] = colorSettings.biomeGradient.Evaluate(Mathf.Clamp01(heightPercent));
                 }
                 else
                 {
+                    // 数据缺失时的默认颜色 (洋红色用于调试，白色用于发布)
                     colors[i] = Color.white;
                 }
 
+                // 4. 三角形
                 if (x != resolution - 1 && y != resolution - 1)
                 {
                     triangles[triIndex] = i;
                     triangles[triIndex + 1] = i + resolution + 1;
                     triangles[triIndex + 2] = i + resolution;
-
                     triangles[triIndex + 3] = i;
                     triangles[triIndex + 4] = i + 1;
                     triangles[triIndex + 5] = i + resolution + 1;
                     triIndex += 6;
-                } 
+                }
             }
         }
 
-        // 应用数据到 Mesh
-        mesh.Clear();
-        mesh.vertices = vertices;
-        mesh.triangles = triangles;
-        mesh.colors = colors;
-        mesh.RecalculateNormals();
+        if (mesh != null) // 防止 mesh 被销毁后调用
+        {
+            mesh.Clear();
+            mesh.vertices = vertices;
+            mesh.triangles = triangles;
+            mesh.colors = colors;
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+        }
     }
 }

@@ -2,21 +2,96 @@ using UnityEngine;
 
 public class Planet : MonoBehaviour
 {
-    [Range(2, 256)]
-    public int resolution = 10; // 网格细分程度，越大越圆，但性能开销越大
-
-    // 【新增】暴露材质球变量，让你在编辑器里拖拽
+    [Range(2, 256)] public int resolution = 40;
     public Material planetMaterial;
 
-    // 存储 6 个面的对象
-    [SerializeField, HideInInspector]
-    MeshFilter[] meshFilters;
-    TerrainFace[] terrainFaces;
+    [Header("Components")]
+    public CloudLayer cloudLayer;
 
+    [Header("Settings")]
     public NoiseSettings noiseSettings;
-    public ColorSettings colorSettings = new ColorSettings();
+    public ColorSettings colorSettings; // 不要在这里 new，在 Initialize 里做
+
+    [SerializeField, HideInInspector] MeshFilter[] meshFilters;
+    TerrainFace[] terrainFaces;
     SimpleNoiseFilter noiseFilter;
 
+    // --- 数据导入 ---
+    public void ApplyData(PlanetData data)
+    {
+        if (data == null) return;
+
+        // 1. 恢复 Noise
+        if (this.noiseSettings == null) this.noiseSettings = new NoiseSettings();
+        // 复制值而不是直接引用，防止多个星球共用一个对象
+        CopyNoiseSettings(data.terrainNoise, this.noiseSettings);
+
+        // 随机种子偏移
+        System.Random prng = new System.Random(data.seed);
+        this.noiseSettings.center = new Vector3(prng.Next(-100, 100), prng.Next(-100, 100), prng.Next(-100, 100));
+
+        // 2. 恢复 Color
+        if (this.colorSettings == null) this.colorSettings = new ColorSettings();
+        // 确保 Gradient 不为空
+        if (data.biomeGradient != null)
+            this.colorSettings.biomeGradient = data.biomeGradient.ToGradient();
+        else
+            this.colorSettings.biomeGradient = new Gradient();
+
+        this.colorSettings.colorSpread = data.colorSpread;
+
+        // 3. 恢复 Cloud
+        if (cloudLayer != null && data.cloudNoise != null)
+        {
+            if (cloudLayer.cloudNoiseSettings == null) cloudLayer.cloudNoiseSettings = new NoiseSettings();
+            CopyNoiseSettings(data.cloudNoise, cloudLayer.cloudNoiseSettings);
+
+            cloudLayer.cloudNoiseSettings.center = new Vector3(prng.Next(-100, 100), prng.Next(-100, 100), prng.Next(-100, 100));
+            cloudLayer.cloudThreshold = data.cloudThreshold;
+            cloudLayer.cloudOpacity = data.cloudOpacity;
+            cloudLayer.GenerateClouds();
+        }
+
+        // 4. 重新初始化并生成
+        Initialize();
+        GenerateMesh();
+    }
+
+    // 辅助：深拷贝 NoiseSettings
+    void CopyNoiseSettings(NoiseSettings source, NoiseSettings target)
+    {
+        if (source == null || target == null) return;
+        target.strength = source.strength;
+        target.baseRoughness = source.baseRoughness;
+        target.center = source.center;
+        target.numLayers = source.numLayers;
+        target.persistence = source.persistence;
+        target.lacunarity = source.lacunarity;
+        target.minValue = source.minValue;
+    }
+
+    public PlanetData ExportData(string name)
+    {
+        PlanetData data = new PlanetData();
+        data.planetName = name;
+        data.seed = Random.Range(0, 10000);
+
+        data.terrainNoise = this.noiseSettings;
+        if (this.colorSettings != null && this.colorSettings.biomeGradient != null)
+            data.biomeGradient = new SerializedGradient(this.colorSettings.biomeGradient);
+        else
+            data.biomeGradient = new SerializedGradient(new Gradient()); // 空保护
+
+        data.colorSpread = (this.colorSettings != null) ? this.colorSettings.colorSpread : 1f;
+
+        if (cloudLayer != null)
+        {
+            data.cloudNoise = cloudLayer.cloudNoiseSettings;
+            data.cloudThreshold = cloudLayer.cloudThreshold;
+            data.cloudOpacity = cloudLayer.cloudOpacity;
+        }
+        return data;
+    }
 
     private void OnValidate()
     {
@@ -26,7 +101,13 @@ public class Planet : MonoBehaviour
 
     void Initialize()
     {
-        noiseFilter = new SimpleNoiseFilter(noiseSettings); // 初始化过滤器
+        // 1. 数据防空
+        if (noiseSettings == null) noiseSettings = new NoiseSettings();
+        if (colorSettings == null) colorSettings = new ColorSettings();
+        if (colorSettings.biomeGradient == null) colorSettings.biomeGradient = new Gradient();
+
+        noiseFilter = new SimpleNoiseFilter(noiseSettings);
+
         if (meshFilters == null || meshFilters.Length == 0)
         {
             meshFilters = new MeshFilter[6];
@@ -37,60 +118,58 @@ public class Planet : MonoBehaviour
 
         for (int i = 0; i < 6; i++)
         {
-            // 1. 如果子物体不存在，先创建
+            // A. 如果连子物体都没了（比如完全新建），就创建物体
             if (meshFilters[i] == null)
             {
                 GameObject meshObj = new GameObject("mesh");
                 meshObj.transform.parent = transform;
 
-                meshObj.AddComponent<MeshRenderer>();
+                MeshRenderer r = meshObj.AddComponent<MeshRenderer>();
                 meshFilters[i] = meshObj.AddComponent<MeshFilter>();
+                // 材质赋值
+                if (planetMaterial != null) r.sharedMaterial = planetMaterial;
+            }
+
+            // B. 【核心修复】检查 Mesh 是否丢失
+            // Prefab 实例化出来的物体，meshFilters[i] 存在，但 sharedMesh 是 null
+            if (meshFilters[i].sharedMesh == null)
+            {
                 meshFilters[i].sharedMesh = new Mesh();
             }
 
-            // 2. 【关键修正】把材质赋值逻辑移到 if 外面！
-            // 这样每次 OnValidate 刷新时，都会强制更新材质，不管物体是不是新建的。
-            MeshRenderer r = meshFilters[i].GetComponent<MeshRenderer>();
-            if (planetMaterial != null)
+            // C. 【双重保险】检查材质是否丢失
+            // 有时候 Prefab 变体可能会丢失材质引用
+            MeshRenderer renderer = meshFilters[i].GetComponent<MeshRenderer>();
+            if (renderer.sharedMaterial == null)
             {
-                r.sharedMaterial = planetMaterial;
-            }
-            else
-            {
-                // 默认保底逻辑
-                var shader = Shader.Find("Universal Render Pipeline/Lit");
-                if (shader == null) shader = Shader.Find("Standard");
-                r.sharedMaterial = new Material(shader);
+                if (planetMaterial != null) renderer.sharedMaterial = planetMaterial;
+                else renderer.sharedMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
             }
 
-            // 3. 初始化地形生成器
-            // (如果你到了阶段二，记得把 noiseFilter 加回来)
-            //terrainFaces[i] = new TerrainFace(meshFilters[i].sharedMesh, resolution, directions[i]);
-            // 【修改】这里需要把 noiseSettings 传进去！
+            // D. 初始化地形生成器
             terrainFaces[i] = new TerrainFace(
                 meshFilters[i].sharedMesh,
                 resolution,
                 directions[i],
                 noiseFilter,
-                noiseSettings,   // <--- 新增传入这个参数
+                noiseSettings,
                 colorSettings
             );
         }
-
-        
     }
 
     void GenerateMesh()
     {
-        noiseFilter = new SimpleNoiseFilter(noiseSettings);
+        // 每次生成前确保 Filter 是最新的
+        if (noiseSettings != null) noiseFilter = new SimpleNoiseFilter(noiseSettings);
 
-        // 每次生成都要重新把配置传进去，因为 TerrainFace 不是 MonoBehavior，它存的是旧数据的引用
-        // 其实更好的做法是 ConstructMesh 接收配置，但为了改动最小，我们重新 new 一遍
-        Initialize();
+        // 确保 Face 已初始化
+        if (terrainFaces == null || terrainFaces.Length == 0 || terrainFaces[0] == null)
+            Initialize();
 
         foreach (TerrainFace face in terrainFaces)
         {
-            face.ConstructMesh();
+            if (face != null) face.ConstructMesh();
         }
     }
 }

@@ -14,4 +14,10 @@ public class ColorSettings
     [Tooltip("颜色覆盖的垂直范围。如果觉得雪山出不来，把这个值调小。")]
     [Range(0.1f, 5f)]
     public float colorSpread = 1f;
+
+    public ColorSettings()
+    {
+        biomeGradient = new Gradient();
+    }
+
 }
