@@ -3,46 +3,46 @@ using UnityEngine;
 [System.Serializable]
 public class NoiseSettings
 {
-    [Header("Basic Shape (»ù´¡ÐÎ×´)")]
+    [Header("Basic Shape (ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×´)")]
 
-    [Tooltip("µØÐÎÂ¡ÆðµÄ¸ß¶È±¶ÂÊ")]
+    [Tooltip("ï¿½ï¿½ï¿½ï¿½Â¡ï¿½ï¿½Ä¸ß¶È±ï¿½ï¿½ï¿½")]
     [Range(0, 2f)]
     public float strength = 1;
 
-    [Tooltip("»ù´¡´Ö²Ú¶È£º¾ö¶¨ÁË´óÂ½°å¿éµÄ´óÐ¡ (Ô½Ð¡°å¿éÔ½´ó)")]
+    [Tooltip("ï¿½ï¿½ï¿½ï¿½ï¿½Ö²Ú¶È£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ë´ï¿½Â½ï¿½ï¿½ï¿½Ä´ï¿½Ð¡ (Ô½Ð¡ï¿½ï¿½ï¿½Ô½ï¿½ï¿½)")]
     [Range(0.5f, 5f)]
     public float baseRoughness = 1;
 
-    [Tooltip("µØÐÎÆ«ÒÆ£º¸Ä±äËüÀ´Ëæ»úÉú³É²»Í¬µÄÐÇÇò±äÌå")]
+    [Tooltip("ï¿½ï¿½ï¿½ï¿½Æ«ï¿½Æ£ï¿½ï¿½Ä±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É²ï¿½Í¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½")]
     public Vector3 center;
 
-    [Space(10)] // ÔÚÃæ°åÉÏ¿ÕÒ»ÐÐ£¬·Ö×éÏÔÊ¾
-    [Header("Detail (Ï¸½Ú·ÖÐÎ)")]
+    [Space(10)] 
+    [Header("Detail (Ï¸ï¿½Ú·ï¿½ï¿½ï¿½)")]
 
-    [Tooltip("µü´ú´ÎÊý£º¾ö¶¨ÁËÉ½ÂöµÄÏ¸½Ú·á¸»¶È (ÍÆ¼ö 4-6)")]
+    [Tooltip("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É½ï¿½ï¿½ï¿½ï¿½Ï¸ï¿½Ú·á¸»ï¿½ï¿½ (ï¿½Æ¼ï¿½ 4-6)")]
     [Range(1, 8)]
     public int numLayers = 4;
 
-    [Tooltip("³ÖÐø¶È£º¾ö¶¨ÁËÏ¸½Ú²ãµÄÈ¨ÖØ (Ô½Ð¡Ï¸½ÚÔ½Ä£ºý£¬Ô½´óÔ½¼âÈñ)")]
-    [Range(0, 1f)] // ÏÞÖÆÔÚ 0-1 Ö®¼ä·Ç³£¹Ø¼ü£¬³¬¹ý1»á·¢É¢
+    [Tooltip("ï¿½ï¿½ï¿½ï¿½ï¿½È£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¸ï¿½Ú²ï¿½ï¿½È¨ï¿½ï¿½ (Ô½Ð¡Ï¸ï¿½ï¿½Ô½Ä£ï¿½ï¿½ï¿½ï¿½Ô½ï¿½ï¿½Ô½ï¿½ï¿½ï¿½ï¿½)")]
+    [Range(0, 1f)]
     public float persistence = 0.5f;
 
-    [Tooltip("Ï¶¶È£º¾ö¶¨ÁËÏ¸½ÚµÄÆµÂÊÔö³¤ (Í¨³£±£³Ö 2.0)")]
+    [Tooltip("Ï¶ï¿½È£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¸ï¿½Úµï¿½Æµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (Í¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 2.0)")]
     [Range(1f, 4f)]
     public float lacunarity = 2;
 
     [Space(10)]
-    [Header("Sea Level (º£Æ½Ãæ¿ØÖÆ)")]
+    [Header("Sea Level (ï¿½ï¿½Æ½ï¿½ï¿½ï¿½ï¿½ï¿½)")]
 
-    [Tooltip("»ù×¼Öµ£ºÊýÖµÔ½´óÇÐµôµÄÂ½µØÔ½¶à (Ä£Äâº£Æ½ÃæÉÏÉý)")]
-    [Range(0.5f, 1.5f)] // ¾­ÑéÖµ£ºÍ¨³£ 0.8-1.2 Ö®¼äÐ§¹û×îºÃ
+    [Tooltip("ï¿½ï¿½×¼Öµï¿½ï¿½ï¿½ï¿½ÖµÔ½ï¿½ï¿½ï¿½Ðµï¿½ï¿½ï¿½Â½ï¿½ï¿½Ô½ï¿½ï¿½ (Ä£ï¿½âº£Æ½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½)")]
+    [Range(0.5f, 1.5f)]  
     public float minValue = 1f;
 }
 
 public class SimpleNoiseFilter
 {
     NoiseSettings settings;
-    SimplexNoise noise = new SimplexNoise(); // ÐèÒªÒýÈëÒ»¸öÔëÉù¿â£¬ÏÂÃæ»á¸ø
+    SimplexNoise noise = new SimplexNoise(); 
 
     public SimpleNoiseFilter(NoiseSettings settings)
     {
@@ -55,20 +55,16 @@ public class SimpleNoiseFilter
         float frequency = settings.baseRoughness;
         float amplitude = 1;
 
-        // fBm Ñ­»·
         for (int i = 0; i < settings.numLayers; i++)
         {
-            // 3D ÔëÉù²ÉÑù£¡ÊäÈëÊÇ point (x,y,z)
-            // ¼ÓÉÏ center Æ«ÒÆÀ´ÊµÏÖÐÇÇòµÄËæ»úÖÖ×ÓÐ§¹û
             float v = noise.Evaluate(point * frequency + settings.center);
 
-            noiseValue += (v + 1) * 0.5f * amplitude; // ¹éÒ»»¯µ½ 0-1 ²¢ÀÛ¼Ó
+            noiseValue += (v + 1) * 0.5f * amplitude; 
 
             frequency *= settings.lacunarity;
             amplitude *= settings.persistence;
         }
 
-        // ¼òµ¥µÄµØÐÎÇ¿¶È¿ØÖÆ£º(ÔëÉùÖµ - ×îÐ¡Öµ) * Ç¿¶È
         noiseValue = Mathf.Max(0, noiseValue - settings.minValue);
         return noiseValue * settings.strength;
     }

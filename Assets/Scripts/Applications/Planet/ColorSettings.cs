@@ -4,14 +4,10 @@ using UnityEngine;
 public class ColorSettings
 {
     [Header("Biome Colors")]
-    public Gradient biomeGradient; // 核心：梯度色编辑器
+    public Gradient biomeGradient;
 
-    
-    // 【新增】颜色延展度
-    // 作用：决定了颜色分布的“稀疏程度”。
-    // 数值越小：颜色变化越快（稍微隆起一点就是雪山）。
-    // 数值越大：颜色变化越慢（必须隆起很高才是雪山）。
-    [Tooltip("颜色覆盖的垂直范围。如果觉得雪山出不来，把这个值调小。")]
+  
+    [Tooltip("锟斤拷色锟斤拷锟角的达拷直锟斤拷围锟斤拷锟斤拷锟斤拷锟斤拷锟窖┥斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷值锟斤拷小锟斤拷")]
     [Range(0.1f, 5f)]
     public float colorSpread = 1f;
 

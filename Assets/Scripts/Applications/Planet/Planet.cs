@@ -136,9 +136,7 @@ public class Planet : MonoBehaviour
                 }
             }
 
-            // 【核心修复】使用 InstanceID 绑定网格
-            // 只有当网格名字包含当前星球的 InstanceID 时，才认为是自己的
-            // 否则（比如名字是 "Procedural_Mesh" 或者是其他星球的ID），一律视为 Prefab 污染，新建 Mesh
+            
             string uniqueName = $"PlanetMesh_{this.GetInstanceID()}_{i}";
 
             if (meshFilters[i].sharedMesh == null || meshFilters[i].sharedMesh.name != uniqueName)

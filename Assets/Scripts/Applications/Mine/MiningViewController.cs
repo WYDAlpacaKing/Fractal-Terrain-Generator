@@ -8,11 +8,10 @@ public class MiningViewController : MonoBehaviour
     private MiningConfig cfg;
     private Texture2D previewTex;
 
-    // --- UI 状态控制 ---
-    private bool showParams = true;  // 左侧面板展开状态
-    private bool showVis = true;     // 右侧面板展开状态
-    private GUIStyle lightPanelStyle; // 自定义白色背景样式
-    private GUIStyle blackTextStyle;  // 黑色字体样式
+    private bool showParams = true;  
+    private bool showVis = true;     
+    private GUIStyle lightPanelStyle; 
+    private GUIStyle blackTextStyle;  
 
     void Start()
     {
@@ -25,7 +24,6 @@ public class MiningViewController : MonoBehaviour
     {
         bool generateMap = false;
 
-        // 键盘快捷键
         if (Input.GetKeyDown(KeyCode.UpArrow))
         {
             cfg.octaves = Mathf.Min(cfg.octaves + 1, 8);
@@ -50,30 +48,21 @@ public class MiningViewController : MonoBehaviour
 
     void OnGUI()
     {
-        // --- 初始化样式 (只做一次) ---
         if (lightPanelStyle == null || lightPanelStyle.normal.background == null)
         {
             lightPanelStyle = new GUIStyle(GUI.skin.box);
             lightPanelStyle.normal.background = MakeTex(2, 2, new Color(1f, 1f, 1f, 0.9f));
         }
 
-        // 缓存原本的颜色，以便绘制完后恢复，防止污染其他 GUI
         Color originalContentColor = GUI.contentColor;
 
-        // =================================================
-        // 左侧：参数控制面板 (Params)
-        // =================================================
         float panelW = 300;
-        // 如果折叠，高度只有 30；如果展开，高度填满屏幕
         float leftHeight = showParams ? (Screen.height - 40) : 30;
 
-        // 开始绘制白色面板
         GUILayout.BeginArea(new Rect(20, 20, panelW, leftHeight), lightPanelStyle);
 
-        // 设置字体为黑色，因为背景是白的
         GUI.contentColor = Color.black;
 
-        // --- 标题栏 (也是折叠按钮) ---
         GUILayout.BeginHorizontal();
         if (GUILayout.Button(showParams ? "▼" : "▶", GUILayout.Width(30))) showParams = !showParams;
         GUILayout.Label("<b>Mining Generator Config</b>", CenteredStyle());
@@ -82,18 +71,12 @@ public class MiningViewController : MonoBehaviour
         if (showParams)
         {
             GUILayout.Space(5);
-            // 使用灰色小字提示
             GUI.contentColor = Color.gray;
             GUILayout.Label("<size=10>Arrows: Octaves | G: Generate</size>", CenteredStyle());
-            GUI.contentColor = Color.black; // 恢复黑色
+            GUI.contentColor = Color.black; 
             GUILayout.Space(10);
 
-            // --- Scroll View 开始 (防止屏幕太小显示不全) ---
-            // 这里不用 ScrollView 也可以，因为我们有动态高度，简单起见直接画
-
-            // 【修改】使用浮点数显示和滑条
             GUILayout.Label($"Block Size: {cfg.blockSize:F2}");
-            // 范围设为 0.1 到 1.0，或者根据你的 Prefab 大小调整
             cfg.blockSize = GUILayout.HorizontalSlider(cfg.blockSize, 0.1f, 2.0f);
 
             GUILayout.Label($"Area: {cfg.areaWidth:F0} x {cfg.areaHeight:F0}");
@@ -103,7 +86,6 @@ public class MiningViewController : MonoBehaviour
             GUILayout.Space(10);
             GUILayout.Label("<b>Fractal Parameters</b>");
 
-            // 记录状态检测变化
             Vector2 oldOffset = cfg.offset;
             float oldScale = cfg.noiseScale;
             int oldOctaves = cfg.octaves;
@@ -173,18 +155,14 @@ public class MiningViewController : MonoBehaviour
         GUILayout.EndArea();
 
 
-        // =================================================
-        // 右侧：可视化面板 (Visualization)
-        // =================================================
         float visX = panelW + 40;
         float visW = 300;
-        float visContentHeight = visW + 30 + 150 + 40; // 预览图高度 + 波形图高度 + 间距
+        float visContentHeight = visW + 30 + 150 + 40; 
         float rightHeight = showVis ? visContentHeight : 30;
 
         GUILayout.BeginArea(new Rect(visX, 20, visW, rightHeight), lightPanelStyle);
         GUI.contentColor = Color.black;
 
-        // --- 标题栏 ---
         GUILayout.BeginHorizontal();
         if (GUILayout.Button(showVis ? "▼" : "▶", GUILayout.Width(30))) showVis = !showVis;
         GUILayout.Label("<b>Algorithm Visualization</b>", CenteredStyle());
@@ -194,7 +172,6 @@ public class MiningViewController : MonoBehaviour
         {
             GUILayout.Space(10);
 
-            // 1. 预览图
             GUILayout.Label("Noise Preview (Realtime)");
             Rect previewRect = GUILayoutUtility.GetRect(visW - 20, visW - 20);
             if (previewTex)
@@ -204,24 +181,20 @@ public class MiningViewController : MonoBehaviour
 
             GUILayout.Space(20);
 
-            // 2. 波形图
             GUILayout.Label("fBm Waveform (1D Slice)");
             Rect waveRect = GUILayoutUtility.GetRect(visW - 20, 120);
-            // 给波形图画一个深色底框，方便看清绿色波形
             GUI.color = new Color(0.2f, 0.2f, 0.2f, 1f);
             GUI.DrawTexture(waveRect, Texture2D.whiteTexture);
-            GUI.color = Color.white; // 恢复
+            GUI.color = Color.white; 
 
             DrawWaveform(waveRect);
         }
 
         GUILayout.EndArea();
 
-        // --- 恢复全局颜色 ---
         GUI.contentColor = originalContentColor;
     }
 
-    // --- 辅助功能 ---
     void DrawWaveform(Rect rect)
     {
         int samples = 100;
@@ -251,7 +224,6 @@ public class MiningViewController : MonoBehaviour
             float plotX = rect.x + t * rect.width;
             float plotY = rect.y + rect.height - (normalizedH * (rect.height - 10)) - 5;
 
-            // 绘制亮绿色的点，在深色底框上很明显
             GUI.color = Color.green;
             GUI.DrawTexture(new Rect(plotX, plotY, 2, 2), dot);
         }
@@ -298,7 +270,6 @@ public class MiningViewController : MonoBehaviour
         return s;
     }
 
-    // --- 核心：生成纯色 Texture2D (用于白色背景) ---
     private Texture2D MakeTex(int width, int height, Color col)
     {
         Color[] pix = new Color[width * height];
@@ -310,8 +281,6 @@ public class MiningViewController : MonoBehaviour
         result.SetPixels(pix);
         result.Apply();
 
-        // 【关键修复】强制拉伸模式为 Clamp (夹具模式)
-        // 如果不设置这个，默认是 Repeat，拉伸到全屏时边缘可能会采样到黑色
         result.wrapMode = TextureWrapMode.Clamp;
 
         return result;
