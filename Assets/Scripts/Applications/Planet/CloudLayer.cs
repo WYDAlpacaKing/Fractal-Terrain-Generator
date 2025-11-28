@@ -3,90 +3,108 @@ using UnityEngine;
 public class CloudLayer : MonoBehaviour
 {
     [Header("Cloud Settings")]
-    public int resolution = 60; // 云层可以比地形粗糙一点，60够了
-    public float size = 1.05f;  // 比星球大 5%
+    public int resolution = 60;
+    public float size = 1.05f;
     public Material cloudMaterial;
 
     [Header("Fractal Noise")]
     public NoiseSettings cloudNoiseSettings;
 
     [Header("Density Control")]
-    [Range(0f, 1f)] public float cloudThreshold = 0.5f; // 阈值：小于此值的地方透明
-    [Range(0f, 1f)] public float cloudOpacity = 0.9f;   // 云最厚地方的透明度
+    [Range(0f, 1f)] public float cloudThreshold = 0.5f;
+    [Range(0f, 1f)] public float cloudOpacity = 0.9f;
 
     [Header("Animation")]
-    public Vector3 rotationSpeed = new Vector3(0, 2f, 0); // 自转速度
+    public Vector3 rotationSpeed = new Vector3(0, 2f, 0);
 
-    // 内部变量
-    MeshFilter[] meshFilters;
-    Mesh[] meshes;
-    SimpleNoiseFilter noiseFilter;
+    [HideInInspector] public MeshFilter[] meshFilters;
+    private Mesh[] meshes;
+    private SimpleNoiseFilter noiseFilter;
 
-    void Start()
-    {
-        GenerateClouds();
-    }
+    void Start() { GenerateClouds(); }
 
-    void Update()
-    {
-        // 让云层缓慢旋转
-        transform.Rotate(rotationSpeed * Time.deltaTime);
-    }
+    void Update() { if (Application.isPlaying) transform.Rotate(rotationSpeed * Time.deltaTime); }
 
     private void OnValidate()
     {
-        // 支持编辑器实时调节
-        if (meshFilters != null && meshFilters.Length > 0)
-        {
-            GenerateClouds();
-        }
+        if (meshFilters != null && meshFilters.Length > 0 && meshFilters[0] != null) GenerateClouds();
     }
 
     public void GenerateClouds()
     {
+        if (this.gameObject.scene.rootCount == 0) return;
+
         Initialize();
 
+        if (cloudNoiseSettings == null) cloudNoiseSettings = new NoiseSettings();
         noiseFilter = new SimpleNoiseFilter(cloudNoiseSettings);
 
         Vector3[] directions = { Vector3.up, Vector3.down, Vector3.left, Vector3.right, Vector3.forward, Vector3.back };
 
         for (int i = 0; i < 6; i++)
         {
-            GenerateFace(i, directions[i]);
+            if (meshes != null && i < meshes.Length && meshes[i] != null)
+                GenerateFace(i, directions[i]);
         }
     }
 
     void Initialize()
     {
-        if (meshFilters == null || meshFilters.Length == 0)
+        if (meshFilters == null || meshFilters.Length != 6) { meshFilters = new MeshFilter[6]; meshes = new Mesh[6]; }
+
+        var existingFilters = new System.Collections.Generic.List<MeshFilter>();
+        foreach (Transform child in transform)
         {
-            meshFilters = new MeshFilter[6];
-            meshes = new Mesh[6];
-
-            for (int i = 0; i < 6; i++)
+            if (child.name.Contains("CloudMesh"))
             {
-                GameObject meshObj = new GameObject($"CloudMesh_{i}");
-                meshObj.transform.parent = transform;
-                meshObj.transform.localPosition = Vector3.zero;
+                var mf = child.GetComponent<MeshFilter>();
+                if (mf) existingFilters.Add(mf);
+            }
+        }
 
-                MeshRenderer mr = meshObj.AddComponent<MeshRenderer>();
-                mr.sharedMaterial = cloudMaterial;
+        for (int i = 0; i < 6; i++)
+        {
+            if (i < existingFilters.Count) { meshFilters[i] = existingFilters[i]; }
+            else
+            {
+                if (Application.isPlaying || (meshFilters[i] == null))
+                {
+                    GameObject meshObj = new GameObject($"CloudMesh_{i}");
+                    meshObj.transform.parent = transform;
+                    meshObj.transform.localPosition = Vector3.zero;
+                    MeshRenderer mr = meshObj.AddComponent<MeshRenderer>();
+                    if (cloudMaterial) mr.sharedMaterial = cloudMaterial;
+                    meshFilters[i] = meshObj.AddComponent<MeshFilter>();
+                }
+            }
 
-                meshFilters[i] = meshObj.AddComponent<MeshFilter>();
-                meshes[i] = new Mesh();
-                meshFilters[i].sharedMesh = meshes[i];
+            if (meshFilters[i] != null)
+            {
+                // 【核心修复】绑定 InstanceID
+                string uniqueName = $"CloudMesh_{this.GetInstanceID()}_{i}";
+
+                if (meshFilters[i].sharedMesh == null || meshFilters[i].sharedMesh.name != uniqueName)
+                {
+                    meshFilters[i].sharedMesh = new Mesh();
+                    meshFilters[i].sharedMesh.name = uniqueName;
+                }
+                meshes[i] = meshFilters[i].sharedMesh;
+
+                MeshRenderer mr = meshFilters[i].GetComponent<MeshRenderer>();
+                if (mr.sharedMaterial == null && cloudMaterial != null) mr.sharedMaterial = cloudMaterial;
             }
         }
     }
 
-    // 这是一个简化版的 ConstructMesh，专门用于云
     void GenerateFace(int faceIndex, Vector3 localUp)
     {
+        if (meshes[faceIndex] == null) return;
+
         Vector3 axisA = new Vector3(localUp.y, localUp.z, localUp.x);
         Vector3 axisB = Vector3.Cross(localUp, axisA);
 
         Vector3[] vertices = new Vector3[resolution * resolution];
-        Color[] colors = new Color[vertices.Length]; // 存储透明度
+        Color[] colors = new Color[vertices.Length];
         int[] triangles = new int[(resolution - 1) * (resolution - 1) * 6];
         int triIndex = 0;
 
@@ -98,31 +116,19 @@ public class CloudLayer : MonoBehaviour
                 Vector2 percent = new Vector2(x, y) / (resolution - 1);
                 Vector3 pointOnUnitCube = localUp + (percent.x - 0.5f) * 2 * axisA + (percent.y - 0.5f) * 2 * axisB;
                 Vector3 pointOnUnitSphere = pointOnUnitCube.normalized;
-
-                // 1. 设置顶点位置 (只是一个稍微大一点的球)
                 vertices[i] = pointOnUnitSphere * size;
 
-                // 2. 计算 3D 噪声
                 float noiseVal = noiseFilter.Evaluate(pointOnUnitSphere);
-
-                // 3. 计算透明度 (Alpha)
-                // 逻辑：如果噪声 > 阈值，则是云；否则是透明
                 float alpha = 0;
                 if (noiseVal > cloudThreshold)
                 {
-                    // 让云的边缘稍微柔和一点，不是硬切
-                    // 归一化：(当前值 - 阈值) / (最大值 - 阈值)
-                    // 假设最大噪声约等于 Strength (在 NoiseSettings 里)
                     float range = cloudNoiseSettings.strength - cloudThreshold;
-                    if (range <= 0.001f) range = 1f; // 防除零
-
+                    if (range <= 0.001f) range = 1f;
                     float normalizedCloud = (noiseVal - cloudThreshold) / range;
                     alpha = Mathf.Clamp01(normalizedCloud) * cloudOpacity;
                 }
+                colors[i] = new Color(1, 1, 1, alpha);
 
-                colors[i] = new Color(1, 1, 1, alpha); // 白色，Alpha由噪声决定
-
-                // 4. 三角形
                 if (x != resolution - 1 && y != resolution - 1)
                 {
                     triangles[triIndex] = i;
@@ -135,11 +141,11 @@ public class CloudLayer : MonoBehaviour
                 }
             }
         }
-
         meshes[faceIndex].Clear();
         meshes[faceIndex].vertices = vertices;
         meshes[faceIndex].triangles = triangles;
-        meshes[faceIndex].colors = colors; // 传入 Shader
+        meshes[faceIndex].colors = colors;
         meshes[faceIndex].RecalculateNormals();
+        meshes[faceIndex].RecalculateBounds();
     }
 }

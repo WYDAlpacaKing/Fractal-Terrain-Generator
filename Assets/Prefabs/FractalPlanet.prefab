@@ -488,6 +488,7 @@ MonoBehaviour:
   cloudThreshold: 0.388
   cloudOpacity: 0.9
   rotationSpeed: {x: 34.39, y: 5, z: 0}
+  meshFilters: []
 --- !u!1 &7187777628897169002
 GameObject:
   m_ObjectHideFlags: 0

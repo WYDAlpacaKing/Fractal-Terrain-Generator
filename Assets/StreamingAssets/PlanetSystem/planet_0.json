@@ -1,18 +1,18 @@
 {
     "planetName": "Planet_0",
-    "seed": 5214,
+    "seed": 5661,
     "radius": 0.0,
     "terrainNoise": {
-        "strength": 0.14722685515880586,
-        "baseRoughness": 1.8308404684066773,
+        "strength": 0.5529999732971191,
+        "baseRoughness": 1.850000023841858,
         "center": {
-            "x": 14.0,
-            "y": 57.0,
-            "z": 30.0
+            "x": 26.799999237060548,
+            "y": 40.0,
+            "z": -42.0
         },
-        "numLayers": 3,
-        "persistence": 0.5,
-        "lacunarity": 2.0,
+        "numLayers": 2,
+        "persistence": 0.5830000042915344,
+        "lacunarity": 2.4800000190734865,
         "minValue": 0.6383388042449951
     },
     "biomeGradient": {
@@ -27,11 +27,11 @@
                 }
             },
             {
-                "time": 0.4000000059604645,
+                "time": 0.3294117748737335,
                 "color": {
-                    "r": 1.0,
-                    "g": 0.9215686321258545,
-                    "b": 0.01568627543747425,
+                    "r": 0.849056601524353,
+                    "g": 0.8244841694831848,
+                    "b": 0.5406728386878967,
                     "a": 1.0
                 }
             },
@@ -65,20 +65,20 @@
             }
         ]
     },
-    "colorSpread": 1.1770012378692628,
+    "colorSpread": 0.30000001192092898,
     "cloudNoise": {
-        "strength": 1.0,
-        "baseRoughness": 1.9411704540252686,
+        "strength": 0.9919999837875366,
+        "baseRoughness": 1.1100000143051148,
         "center": {
-            "x": 71.0,
-            "y": -81.0,
-            "z": -84.0
+            "x": -11.109999656677246,
+            "y": -50.0,
+            "z": -88.0
         },
-        "numLayers": 3,
-        "persistence": 0.5,
-        "lacunarity": 2.0,
+        "numLayers": 6,
+        "persistence": 0.6209999918937683,
+        "lacunarity": 2.4000000953674318,
         "minValue": 1.0
     },
-    "cloudThreshold": 0.6907086968421936,
+    "cloudThreshold": 0.15199999511241914,
     "cloudOpacity": 0.76533043384552
 }
