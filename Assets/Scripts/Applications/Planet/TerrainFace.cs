@@ -19,7 +19,7 @@ public class TerrainFace
         this.resolution = resolution;
         this.localUp = localUp;
         this.noiseFilter = noiseFilter;
-        this.noiseSettings = noiseSettings; // 【新增 3】保存引用
+        this.noiseSettings = noiseSettings; 
         this.colorSettings = colorSettings;
 
         axisA = new Vector3(localUp.y, localUp.z, localUp.x);
